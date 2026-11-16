@@ -17,6 +17,9 @@ GitHub Actions (04:10 UTC varje dag)
 - **ICA** – `scraper/ica.mjs` kör 23:30 svensk tid. Användaren väljer sin ICA-butik på webbsidan;
   butiken läggs till och hämtas från nästa natt (ca 1 timme per butik, äldst hämtade först).
   ICA saknar streckkod, så varor matchas på varumärke, storlek och namnlikhet (`scraper/normalize.mjs`).
+  ICA-butiker utan e-handel (t.ex. ICA Nära Pedagogen Park) får veckans erbjudanden från
+  `ica.se/erbjudanden/<butik>/` – med streckkoder, så de matchas exakt. Utgångna erbjudanden rensas.
+  Man kan välja upp till fyra ICA-butiker samtidigt.
 - **Webbsida** – `index.html`, en statisk sida som läser direkt från Supabase. Kundvagn och
   valt ICA-butik sparas i webbläsaren.
 
