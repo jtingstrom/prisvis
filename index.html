@@ -83,6 +83,8 @@
   tfoot tr.total td.winner { background: var(--accent); color: #fff; }
   tfoot .sub { font-size: 12px; font-weight: 500; color: var(--muted); }
   tfoot td.winner .sub { color: rgba(255,255,255,.85); }
+  tfoot tr.total td.incomplete { color: var(--muted); font-size: 15px; font-weight: 600; }
+  tfoot td.incomplete .sub { color: var(--promo); }
   .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px; }
   .sum-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
   .sum-card .label { font-size: 13px; color: var(--muted); }
@@ -300,7 +302,7 @@ async function renderBasket() {
   const totalRow = cols.map((s) => {
     const t = totals[s.id];
     const isWin = winner && s.id === winner.id;
-    return `<td class="${isWin ? 'winner' : ''}">${kr(t.sum)}<div class="sub">${t.found === n ? 'alla varor' : `${t.found} av ${n} varor`}</div></td>`;
+    return `<td class="${isWin ? 'winner' : ''} ${t.found < n ? 'incomplete' : ''}">${kr(t.sum)}<div class="sub">${t.found === n ? 'alla varor' : `${t.found} av ${n} varor`}</div></td>`;
   }).join('');
 
   const summary = [];
