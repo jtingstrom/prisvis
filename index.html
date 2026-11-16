@@ -221,9 +221,14 @@ function renderStorebar() {
   }
 }
 
+let catalogPromise = null;
 async function loadCatalog() {
-  if (!icaCatalog) icaCatalog = await api('ica_stores?select=account_id,name,city,street,format,lat,lng&order=name&limit=1000');
-  return icaCatalog;
+  if (!catalogPromise) {
+    catalogPromise = api('ica_stores?select=account_id,name,city,street,format,lat,lng&order=name&limit=1000')
+      .then((rows) => (icaCatalog = rows))
+      .catch((e) => { catalogPromise = null; throw e; });
+  }
+  return catalogPromise;
 }
 
 function renderStoreList(stores) {
@@ -234,9 +239,9 @@ function renderStoreList(stores) {
     </li>`).join('') || '<li class="sub">Inga butiker hittades.</li>';
 }
 
-async function filterStores(q) {
+async function filterStores() {
   const all = await loadCatalog();
-  const t = q.trim().toLowerCase();
+  const t = $('store-q').value.trim().toLowerCase(); // alltid aktuellt sökord, även om laddningen tog tid
   renderStoreList(t ? all.filter((s) => `${s.name} ${s.city} ${s.street}`.toLowerCase().includes(t)) : all);
 }
 
@@ -244,7 +249,7 @@ async function openPicker() {
   $('picker').hidden = !$('picker').hidden;
   if (!$('picker').hidden) {
     $('store-q').focus();
-    try { await filterStores($('store-q').value); }
+    try { await filterStores(); }
     catch (e) { $('picker-msg').textContent = 'Kunde inte hämta butikslistan.'; console.error(e); }
   }
 }
@@ -268,7 +273,7 @@ async function chooseStore(account) {
 }
 
 $('storebar').addEventListener('click', (e) => { if (e.target.id === 'open-picker') openPicker(); });
-$('store-q').addEventListener('input', (e) => filterStores(e.target.value));
+$('store-q').addEventListener('input', () => filterStores());
 $('store-list').addEventListener('click', (e) => { const li = e.target.closest('li[data-account]'); if (li) chooseStore(li.dataset.account); });
 $('store-list').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const li = e.target.closest('li[data-account]'); if (li) chooseStore(li.dataset.account); } });
 $('near-me').addEventListener('click', () => {
