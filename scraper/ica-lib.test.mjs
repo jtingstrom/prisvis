@@ -48,3 +48,23 @@ test('läser state ur html', () => {
   assert.equal(entities[0].name, 'A');
   assert.equal(total, 1);
 });
+
+import { extractJsonArray, offersToItems } from './ica-lib.mjs';
+
+test('erbjudandesida: plockar ut weeklyOffers utan att köra sidans kod', () => {
+  const html = readFileSync(new URL('./fixtures/ica-offers-page.html', import.meta.url), 'utf8');
+  const offers = extractJsonArray(html, 'weeklyOffers');
+  assert.equal(offers.length, 2);
+  const items = offersToItems(offers, 'https://www.ica.se/erbjudanden/x-1051007/');
+  assert.equal(items.length, 3); // en per streckkod
+  const citrus = items[0];
+  assert.equal(citrus.ean, '7318690132301');
+  assert.equal(citrus.price, 30.9);
+  assert.equal(citrus.promo_price, 20);
+  assert.equal(citrus.brand, 'ICA');
+  assert.match(citrus.promo_text, /20 kr\/st · Stammispris · t\.o\.m\. 22\/11/);
+  const fil = items[1];
+  assert.equal(fil.price, null);        // ordinarie pris är ett intervall
+  assert.equal(fil.promo_price, 20);    // 2 för 40 kr
+  assert.equal(fil.name, 'Fil Hall/Pass 3.5%');
+});

@@ -101,6 +101,9 @@
   .storebar strong { color: var(--ink); }
   .storebar .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--promo-soft); color: var(--promo); }
   .storebar .pill.ok { background: var(--accent-soft); color: var(--accent); }
+  .store-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line);
+                border-radius: 999px; padding: 4px 6px 4px 12px; }
+  .chip-x { background: none; color: var(--muted); padding: 0 6px; font-size: 16px; line-height: 1; }
   .small-btn { padding: 6px 14px; font-size: 13px; background: var(--card); color: var(--accent); border: 1px solid var(--line); }
   .picker { max-width: 620px; margin: 0 auto 18px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
             padding: 14px; text-align: left; }
@@ -198,43 +201,57 @@ function setQty(product, qty) {
   saveBasket();
 }
 
-// ---------- ICA-butiksval ----------
-const ICA_KEY = 'prisvis.icaStore.v1';
-let icaStore = null; // { id: 'ica-1003417', account, name, status }
-try { icaStore = JSON.parse(localStorage.getItem(ICA_KEY)); } catch { icaStore = null; }
-let icaCatalog = null;
+// ---------- ICA-butiksval (flera butiker) ----------
+const ICA_KEY = 'prisvis.icaStores.v2';
+const MAX_ICA = 4;
+// [{ id: 'ica-1003417', account, name, status, coverage: 'full' | 'offers' }]
+let icaStores = [];
+try {
+  icaStores = JSON.parse(localStorage.getItem(ICA_KEY)) || [];
+  const old = JSON.parse(localStorage.getItem('prisvis.icaStore.v1'));
+  if (!icaStores.length && old) icaStores = [{ ...old, coverage: 'full' }];
+} catch { icaStores = []; }
+const saveIca = () => { try { localStorage.setItem(ICA_KEY, JSON.stringify(icaStores)); } catch { /* ignorera */ } };
+const chosenIds = () => new Set(icaStores.map((s) => s.id));
+const offersOnly = (storeId) => icaStores.some((s) => s.id === storeId && s.coverage === 'offers');
 
-// ICA-priser visas bara för den valda butiken
-const visibleOffer = (o) => o.chain !== 'ica' || (icaStore && o.store_id === icaStore.id);
+// ICA-priser visas bara för de valda butikerna
+const visibleOffer = (o) => o.chain !== 'ica' || chosenIds().has(o.store_id);
+
+function statusPill(s) {
+  if (s.status === 'full') return '<span class="pill">kö</span>';
+  if (s.status !== 'ready') return '<span class="pill">hämtas i natt</span>';
+  return s.coverage === 'offers' ? '<span class="pill ok">veckans erbjudanden</span>' : '';
+}
 
 function renderStorebar() {
   const bar = $('storebar');
-  if (!icaStore) {
-    bar.innerHTML = `<span>Välj din ICA-butik för att jämföra med ICA</span><button class="small-btn" id="open-picker">Välj ICA-butik</button>`;
-  } else {
-    const pill = icaStore.status === 'ready'
-      ? '<span class="pill ok">priser finns</span>'
-      : icaStore.status === 'full'
-        ? '<span class="pill">kö – för många butiker just nu</span>'
-        : '<span class="pill">priserna hämtas i natt</span>';
-    bar.innerHTML = `<span>${dot('ica')} <strong>${esc(icaStore.name)}</strong></span>${pill}<button class="small-btn" id="open-picker">Byt</button>`;
-  }
+  const chips = icaStores.map((s) => `<span class="store-chip">${dot('ica')} <strong>${esc(s.name)}</strong> ${statusPill(s)}
+      <button class="chip-x" data-remove="${esc(s.id)}" aria-label="Ta bort ${esc(s.name)}">×</button></span>`).join('');
+  const add = icaStores.length < MAX_ICA
+    ? `<button class="small-btn" id="open-picker">${icaStores.length ? '+ ICA-butik' : 'Välj ICA-butiker'}</button>` : '';
+  bar.innerHTML = icaStores.length ? chips + add : `<span>Välj dina ICA-butiker för att jämföra med ICA</span>${add}`;
 }
 
 let catalogPromise = null;
 async function loadCatalog() {
   if (!catalogPromise) {
-    catalogPromise = api('ica_stores?select=account_id,name,city,street,format,lat,lng&order=name&limit=1000')
-      .then((rows) => (icaCatalog = rows))
-      .catch((e) => { catalogPromise = null; throw e; });
+    catalogPromise = Promise.all([
+      api('ica_stores?select=account_id,name,city,street,format,lat,lng&order=name&limit=1000'),
+      api('stores?chain=eq.ica&coverage=eq.offers&select=id,name,last_scraped_at&order=name'),
+    ]).then(([full, offers]) => [
+      ...offers.map((s) => ({ key: s.id, store_id: s.id, name: s.name, coverage: 'offers', ready: !!s.last_scraped_at })),
+      ...full.map((s) => ({ key: `ica-${s.account_id}`, account_id: s.account_id, name: s.name, city: s.city, street: s.street, lat: s.lat, lng: s.lng, coverage: 'full' })),
+    ]).catch((e) => { catalogPromise = null; throw e; });
   }
   return catalogPromise;
 }
 
 function renderStoreList(stores) {
-  $('store-list').innerHTML = stores.slice(0, 30).map((s) => `
-    <li tabindex="0" data-account="${esc(s.account_id)}">
-      <span><strong>${esc(s.name)}</strong><br><span class="sub">${esc([s.street, s.city].filter(Boolean).join(', '))}</span></span>
+  const chosen = chosenIds();
+  $('store-list').innerHTML = stores.filter((s) => !chosen.has(s.key)).slice(0, 30).map((s) => `
+    <li tabindex="0" data-key="${esc(s.key)}">
+      <span><strong>${esc(s.name)}</strong><br><span class="sub">${s.coverage === 'offers' ? 'Ingen e-handel – bara veckans erbjudanden' : esc([s.street, s.city].filter(Boolean).join(', '))}</span></span>
       ${s.km != null ? `<span class="sub">${s.km.toFixed(1)} km</span>` : ''}
     </li>`).join('') || '<li class="sub">Inga butiker hittades.</li>';
 }
@@ -242,7 +259,7 @@ function renderStoreList(stores) {
 async function filterStores() {
   const all = await loadCatalog();
   const t = $('store-q').value.trim().toLowerCase(); // alltid aktuellt sökord, även om laddningen tog tid
-  renderStoreList(t ? all.filter((s) => `${s.name} ${s.city} ${s.street}`.toLowerCase().includes(t)) : all);
+  renderStoreList(t ? all.filter((s) => `${s.name} ${s.city || ''} ${s.street || ''}`.toLowerCase().includes(t)) : all);
 }
 
 async function openPicker() {
@@ -254,28 +271,39 @@ async function openPicker() {
   }
 }
 
-async function chooseStore(account) {
-  const s = (icaCatalog || []).find((x) => x.account_id === account);
-  if (!s) return;
+function afterStoreChange() {
+  saveIca();
+  renderStorebar();
+  if (!$('view-basket').hidden) renderBasket();
+  else if (lastResults.length) $('results').innerHTML = lastResults.filter((p) => (p.offers || []).some(visibleOffer)).map(renderProduct).join('');
+}
+
+async function chooseStore(key) {
+  const all = await loadCatalog();
+  const s = all.find((x) => x.key === key);
+  if (!s || icaStores.length >= MAX_ICA) return;
   $('picker-msg').textContent = 'Sparar…';
   try {
-    const r = await rpc('request_ica_store', { p_account: account });
-    icaStore = { id: `ica-${account}`, account, name: s.name, status: r.status };
-    try { localStorage.setItem(ICA_KEY, JSON.stringify(icaStore)); } catch { /* ignorera */ }
+    let status = s.ready ? 'ready' : 'pending';
+    if (s.coverage === 'full') status = (await rpc('request_ica_store', { p_account: s.account_id })).status;
+    icaStores.push({ id: key, account: s.account_id || null, name: s.name, status, coverage: s.coverage });
     $('picker').hidden = true;
-    renderStorebar();
-    if (!$('view-basket').hidden) renderBasket();
-    else if (lastResults.length) $('results').innerHTML = lastResults.map(renderProduct).join('');
+    $('store-q').value = '';
+    afterStoreChange();
   } catch (e) {
     $('picker-msg').textContent = 'Något gick fel. Försök igen.';
     console.error(e);
   }
 }
 
-$('storebar').addEventListener('click', (e) => { if (e.target.id === 'open-picker') openPicker(); });
+$('storebar').addEventListener('click', (e) => {
+  if (e.target.id === 'open-picker') openPicker();
+  const rm = e.target.closest('[data-remove]');
+  if (rm) { icaStores = icaStores.filter((s) => s.id !== rm.dataset.remove); afterStoreChange(); }
+});
 $('store-q').addEventListener('input', () => filterStores());
-$('store-list').addEventListener('click', (e) => { const li = e.target.closest('li[data-account]'); if (li) chooseStore(li.dataset.account); });
-$('store-list').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const li = e.target.closest('li[data-account]'); if (li) chooseStore(li.dataset.account); } });
+$('store-list').addEventListener('click', (e) => { const li = e.target.closest('li[data-key]'); if (li) chooseStore(li.dataset.key); });
+$('store-list').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const li = e.target.closest('li[data-key]'); if (li) chooseStore(li.dataset.key); } });
 $('near-me').addEventListener('click', () => {
   if (!navigator.geolocation) { $('picker-msg').textContent = 'Din webbläsare kan inte ange position.'; return; }
   $('picker-msg').textContent = 'Hämtar din position…';
@@ -292,13 +320,16 @@ $('near-me').addEventListener('click', () => {
   }, () => { $('picker-msg').textContent = 'Kunde inte hämta din position. Sök på ort i stället.'; });
 });
 
-// Uppdatera status för vald butik (t.ex. när priserna har hämtats)
+// Uppdatera status för valda butiker (t.ex. när priserna har hämtats)
 async function refreshStoreStatus() {
-  if (!icaStore) return;
+  if (!icaStores.length) return;
   try {
-    const [row] = await api(`stores?id=eq.${encodeURIComponent(icaStore.id)}&select=last_scraped_at`);
-    if (row) icaStore.status = row.last_scraped_at ? 'ready' : 'pending';
-    try { localStorage.setItem(ICA_KEY, JSON.stringify(icaStore)); } catch { /* ignorera */ }
+    const rows = await api(`stores?id=in.(${icaStores.map((s) => `"${s.id}"`).join(',')})&select=id,last_scraped_at,coverage`);
+    for (const s of icaStores) {
+      const row = rows.find((r) => r.id === s.id);
+      if (row) { s.status = row.last_scraped_at ? 'ready' : 'pending'; s.coverage = row.coverage; }
+    }
+    saveIca();
   } catch { /* behåll senaste kända status */ }
   renderStorebar();
 }
@@ -399,7 +430,7 @@ async function renderBasket() {
   // Bara butiker som har minst en vara i vagnen visas som kolumner
   const byKey = new Map(offers.map((o) => [`${o.product_id}|${o.store_id}`, o]));
   const cols = stores
-    .filter((s) => s.chain !== 'ica' || (icaStore && s.id === icaStore.id))
+    .filter((s) => s.chain !== 'ica' || chosenIds().has(s.id))
     .filter((s) => offers.some((o) => o.store_id === s.id));
   const totals = Object.fromEntries(cols.map((s) => [s.id, { sum: 0, found: 0 }]));
   let mixSum = 0, mixFound = 0;
@@ -455,7 +486,7 @@ async function renderBasket() {
     <div class="summary">${summary.join('')}</div>
     <div class="basket-wrap">
       <table class="basket">
-        <thead><tr><th>Vara</th><th>Antal</th>${cols.map((s) => `<th><span class="store">${dot(s.chain)}${esc(s.name)}</span></th>`).join('')}</tr></thead>
+        <thead><tr><th>Vara</th><th>Antal</th>${cols.map((s) => `<th><span class="store">${dot(s.chain)}${esc(s.name)}</span>${offersOnly(s.id) ? '<div class="item-meta">bara veckans erbjudanden</div>' : ''}</th>`).join('')}</tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr class="total"><td>Totalt</td><td></td>${totalRow}</tr></tfoot>
       </table>

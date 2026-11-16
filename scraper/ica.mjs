@@ -4,7 +4,7 @@
 // Användning: node scraper/ica.mjs [--max-stores=N] [--max-pages=N] [--budget-min=300] [--dry-run]
 
 import { readFileSync } from 'node:fs';
-import { ICA_BASE, parseState, productsFromState, foodLeaves, toIcaItem, toIcaStore } from './ica-lib.mjs';
+import { ICA_BASE, parseState, productsFromState, foodLeaves, toIcaItem, toIcaStore, extractJsonArray, offersToItems } from './ica-lib.mjs';
 
 const DELAY_MS = 3_000; // ICA anger ingen crawl-delay; vi håller ändå en lugn takt
 const USER_AGENT = 'PrisvisBot/0.1 (+https://github.com/jtingstrom/prisvis)';
@@ -112,11 +112,35 @@ async function scrapeStore(store) {
   return { done: true, totals };
 }
 
+// Butiker utan e-handel: bara veckans erbjudanden från ica.se (en sida per butik)
+async function scrapeOfferStores() {
+  const stores = await supa('stores?chain=eq.ica&coverage=eq.offers&select=id,name,ica_offers_slug');
+  for (const store of stores) {
+    const runStart = new Date().toISOString();
+    const pageUrl = `https://www.ica.se/erbjudanden/${store.ica_offers_slug}/`;
+    const wait = lastRequest + DELAY_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastRequest = Date.now();
+    const res = await fetch(pageUrl, { headers: { 'user-agent': USER_AGENT, accept: 'text/html' } });
+    if (!res.ok) { console.warn(`  ${store.name}: ${res.status}`); continue; }
+    const offers = extractJsonArray(await res.text(), 'weeklyOffers');
+    const items = offersToItems(offers, pageUrl);
+    console.log(`== ${store.name}: ${offers?.length ?? 0} erbjudanden, ${items.length} varor`);
+    if (dryRun) { if (items[0]) console.log('   exempel:', JSON.stringify(items[0])); continue; }
+    if (!items.length) continue; // rensa inte om sidan av någon anledning var tom
+    const r = await supa('rpc/ingest_offers', { p_token: INGEST_TOKEN, p_store: store.id, p_items: items });
+    const pruned = await supa('rpc/prune_store_offers', { p_token: INGEST_TOKEN, p_store: store.id, p_before: runStart });
+    await supa('rpc/mark_store_scraped', { p_token: INGEST_TOKEN, p_store: store.id });
+    console.log(`  ${r.new} nya, ${r.changed} ändrade, ${pruned} utgångna borttagna`);
+  }
+}
+
 async function main() {
   console.log(`== ICA: startar ${new Date().toISOString()}`);
   await refreshStoreCatalog();
+  await scrapeOfferStores();
 
-  const stores = await supa('stores?chain=eq.ica&select=id,name,ica_account,last_scraped_at&order=last_scraped_at.asc.nullsfirst');
+  const stores = await supa('stores?chain=eq.ica&coverage=eq.full&select=id,name,ica_account,last_scraped_at&order=last_scraped_at.asc.nullsfirst');
   const cutoff = Date.now() - REFRESH_HOURS * 3600_000;
   const due = stores.filter((s) => !s.last_scraped_at || Date.parse(s.last_scraped_at) < cutoff).slice(0, maxStores);
   console.log(`${stores.length} valda ICA-butiker, ${due.length} att hämta nu`);
