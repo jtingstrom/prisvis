@@ -1,0 +1,11 @@
+{
+  "name": "prisvis",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test scraper/*.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.65.1"
+  }
+}

@@ -1,0 +1,37 @@
+name: Hämta Coop-priser
+
+on:
+  schedule:
+    # 03:00 UTC (04:00 svensk vintertid)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: 'Max antal sidor (tomt = alla)'
+        required: false
+        default: ''
+
+concurrency:
+  group: scrape-coop
+  cancel-in-progress: false
+
+jobs:
+  coop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - name: Hämta Coop
+        env:
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.max_pages }}" ]; then ARGS="--max-pages=${{ inputs.max_pages }}"; fi
+          node scraper/coop.mjs $ARGS
