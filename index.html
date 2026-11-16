@@ -15,10 +15,16 @@
   * { box-sizing: border-box; }
   body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
          background: var(--bg); color: var(--ink); line-height: 1.45; }
-  header { padding: 40px 20px 24px; text-align: center; }
+  header { padding: 32px 20px 20px; text-align: center; }
   .logo { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
   .logo span { color: var(--accent); }
-  .tagline { color: var(--muted); margin: 6px 0 22px; }
+  .tagline { color: var(--muted); margin: 6px 0 18px; }
+  nav.tabs { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px; margin-bottom: 18px; }
+  nav.tabs button { background: transparent; color: var(--muted); padding: 8px 18px; }
+  nav.tabs button.active { background: var(--accent); color: #fff; }
+  .badge { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px;
+           background: var(--accent-soft); color: var(--accent); font-size: 12px; line-height: 20px; }
+  nav.tabs button.active .badge { background: rgba(255,255,255,.25); color: #fff; }
   form { max-width: 620px; margin: 0 auto; display: flex; gap: 8px; }
   input[type=search] { flex: 1; font: inherit; font-size: 17px; padding: 14px 16px; border-radius: 999px;
          border: 1.5px solid var(--line); background: var(--card); outline: none; }
@@ -29,22 +35,28 @@
   .chip { font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line);
           background: var(--card); color: var(--muted); cursor: pointer; }
   .chip:hover { border-color: var(--accent); color: var(--accent); }
-  main { max-width: 900px; margin: 0 auto; padding: 0 16px 60px; }
-  .status { text-align: center; color: var(--muted); padding: 24px 0; }
+  main { max-width: 960px; margin: 0 auto; padding: 0 16px 60px; }
+  .status { text-align: center; color: var(--muted); padding: 20px 0; }
   .grid { display: grid; gap: 12px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
           padding: 16px; display: grid; grid-template-columns: 84px 1fr; gap: 16px; }
   .card img { width: 84px; height: 84px; object-fit: contain; border-radius: 10px; background: #fafaf7; }
   .noimg { width: 84px; height: 84px; border-radius: 10px; background: #f0eee8; }
-  .title { font-weight: 650; margin: 0; }
+  .card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .title { font-weight: 650; margin: 0; font-size: 18px; }
   .meta { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
+  .add { padding: 7px 14px; font-size: 14px; white-space: nowrap; }
+  .add.in { background: var(--accent-soft); color: var(--accent); }
+  .stepper { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); border-radius: 999px; padding: 3px; }
+  .stepper button { width: 30px; height: 30px; padding: 0; font-size: 17px; background: var(--card); color: var(--accent); }
+  .stepper span { min-width: 22px; text-align: center; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
   .offers { display: grid; gap: 6px; }
   .offer { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 10px;
            padding: 8px 10px; border-radius: 10px; text-decoration: none; color: inherit; border: 1px solid transparent; }
   .offer:hover { border-color: var(--line); }
   .offer.best { background: var(--accent-soft); }
   .store { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
   .promo { font-size: 12px; color: var(--promo); background: var(--promo-soft); padding: 2px 8px;
            border-radius: 999px; justify-self: start; }
   .compare { font-size: 12px; color: var(--muted); }
@@ -53,10 +65,40 @@
   .price s { color: var(--muted); font-size: 13px; margin-right: 6px; }
   .best-label { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
   .out { opacity: .5; }
+
+  /* Kundvagn */
+  .basket-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
+  table.basket { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 560px; }
+  table.basket th, table.basket td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: middle; }
+  table.basket th:first-child, table.basket td:first-child { text-align: left; }
+  table.basket thead th { font-size: 14px; position: sticky; top: 0; background: var(--card); }
+  table.basket thead th .store { justify-content: flex-end; }
+  .item-name { font-weight: 600; }
+  .item-meta { font-size: 12px; color: var(--muted); }
+  td.cheapest { background: var(--accent-soft); font-weight: 700; color: var(--accent); }
+  td.missing { color: var(--muted); font-size: 13px; }
+  .cell-promo { display: block; font-size: 11px; color: var(--promo); }
+  tfoot td { font-weight: 700; border-bottom: 0; }
+  tfoot tr.total td { font-size: 18px; }
+  tfoot tr.total td.winner { background: var(--accent); color: #fff; }
+  tfoot .sub { font-size: 12px; font-weight: 500; color: var(--muted); }
+  tfoot td.winner .sub { color: rgba(255,255,255,.85); }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .sum-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .sum-card .label { font-size: 13px; color: var(--muted); }
+  .sum-card .value { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+  .sum-card.win { border-color: var(--accent); background: var(--accent-soft); }
+  .basket-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 12px; flex-wrap: wrap; }
+  .link-btn { background: none; color: var(--muted); padding: 0; font-weight: 500; text-decoration: underline; }
+  .note { color: var(--muted); font-size: 13px; }
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+
   footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
+  [hidden] { display: none !important; }
   @media (max-width: 560px) {
     .card { grid-template-columns: 56px 1fr; }
     .card img, .noimg { width: 56px; height: 56px; }
+    .card-head { flex-direction: column; }
     .offer { grid-template-columns: 70px 1fr auto; }
   }
 </style>
@@ -65,17 +107,26 @@
 <header>
   <h1 class="logo">pris<span>vis</span></h1>
   <p class="tagline">Jämför matpriser mellan kedjorna – gratis och utan reklam.</p>
-  <form id="f" role="search">
-    <input id="q" type="search" placeholder="Sök vara, t.ex. mellanmjölk eller Arla" autocomplete="off" aria-label="Sök vara">
-    <button>Sök</button>
-  </form>
-  <div class="chips" id="chips"></div>
+  <nav class="tabs" aria-label="Vy">
+    <button id="tab-search" class="active">Sök</button>
+    <button id="tab-basket">Kundvagn<span class="badge" id="basket-count">0</span></button>
+  </nav>
+  <div id="search-head">
+    <form id="f" role="search">
+      <input id="q" type="search" placeholder="Sök vara, t.ex. mellanmjölk eller Arla" autocomplete="off" aria-label="Sök vara">
+      <button>Sök</button>
+    </form>
+    <div class="chips" id="chips"></div>
+  </div>
 </header>
 <main>
-  <div class="status" id="status"></div>
-  <div class="grid" id="results"></div>
+  <section id="view-search">
+    <div class="status" id="status"></div>
+    <div class="grid" id="results"></div>
+  </section>
+  <section id="view-basket" hidden></section>
 </main>
-<footer id="footer">Priserna hämtas automatiskt varje morgon från kedjornas webbutiker. Kontrollera alltid priset i butiken.</footer>
+<footer>Priserna hämtas automatiskt varje morgon från kedjornas webbutiker. Kampanjpriser kan kräva flerköp eller medlemskap – kontrollera alltid i butiken.</footer>
 
 <script>
 const CONFIG = {
@@ -84,28 +135,49 @@ const CONFIG = {
 };
 const CHAIN_COLORS = { willys: 'var(--willys)', hemkop: 'var(--hemkop)', coop: 'var(--coop)', ica: 'var(--ica)' };
 const SUGGESTIONS = ['mellanmjölk', 'smör', 'kaffe', 'nötfärs', 'ägg', 'havregryn', 'bananer'];
+const STORAGE_KEY = 'prisvis.basket.v1';
 
 const $ = (id) => document.getElementById(id);
 const kr = (n) => n == null ? '–' : Number(n).toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const effective = (o) => o.promo_price ?? o.price;
+const dot = (chain) => `<span class="dot" style="background:${CHAIN_COLORS[chain] || '#999'}"></span>`;
 
-async function rpc(fn, body) {
-  const res = await fetch(`${CONFIG.url}/rest/v1/rpc/${fn}`, {
-    method: 'POST',
-    headers: { apikey: CONFIG.key, authorization: `Bearer ${CONFIG.key}`, 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+async function api(path, init = {}) {
+  const res = await fetch(`${CONFIG.url}/rest/v1/${path}`, {
+    ...init,
+    headers: { apikey: CONFIG.key, authorization: `Bearer ${CONFIG.key}`, 'content-type': 'application/json', ...(init.headers || {}) },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+const rpc = (fn, body) => api(`rpc/${fn}`, { method: 'POST', body: JSON.stringify(body) });
+
+// ---------- Kundvagn (sparas i webbläsaren) ----------
+// { [productId]: { qty, name, brand, size, image_url } }
+let basket = {};
+try { basket = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { basket = {}; }
+function saveBasket() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(basket)); } catch { /* privat läge e.d. */ }
+  const n = Object.values(basket).reduce((s, i) => s + i.qty, 0);
+  $('basket-count').textContent = n;
+}
+function setQty(product, qty) {
+  const id = String(product.product_id ?? product.id);
+  if (qty <= 0) delete basket[id];
+  else basket[id] = { qty, name: product.name, brand: product.brand, size: product.size, image_url: product.image_url };
+  saveBasket();
+}
+
+// ---------- Sök ----------
+let lastResults = [];
 
 function renderOffer(o, isBest) {
-  const effective = o.promo_price ?? o.price;
   const priceHtml = o.promo_price != null
     ? `<s>${kr(o.price)}</s><strong>${kr(o.promo_price)}</strong>`
     : `<strong>${kr(o.price)}</strong>`;
   return `<a class="offer ${isBest ? 'best' : ''} ${o.in_stock === false ? 'out' : ''}" href="${esc(o.url)}" target="_blank" rel="noopener">
-    <span class="store"><span class="dot" style="background:${CHAIN_COLORS[o.chain] || '#999'}"></span>${esc(o.store)}</span>
+    <span class="store">${dot(o.chain)}${esc(o.store)}</span>
     <span>
       ${o.promo_text ? `<span class="promo">${esc(o.promo_text)}</span>` : ''}
       ${o.compare_price ? `<span class="compare">${kr(o.compare_price)}/${esc(o.compare_unit || '')}</span>` : ''}
@@ -115,16 +187,27 @@ function renderOffer(o, isBest) {
   </a>`;
 }
 
+function basketControl(p) {
+  const item = basket[String(p.product_id)];
+  if (!item) return `<button class="add" data-add="${p.product_id}">+ Kundvagn</button>`;
+  return `<span class="stepper"><button data-dec="${p.product_id}" aria-label="Minska">−</button><span>${item.qty}</span><button data-inc="${p.product_id}" aria-label="Öka">+</button></span>`;
+}
+
 function renderProduct(p) {
   const offers = p.offers || [];
-  const bestPrice = Math.min(...offers.map((o) => o.promo_price ?? o.price ?? Infinity));
+  const bestPrice = Math.min(...offers.map((o) => effective(o) ?? Infinity));
   const multi = offers.length > 1;
   return `<article class="card">
     ${p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy">` : '<div class="noimg"></div>'}
     <div>
-      <h2 class="title">${esc(p.name)}</h2>
-      <p class="meta">${[p.brand, p.size, p.category].filter(Boolean).map(esc).join(' · ')}</p>
-      <div class="offers">${offers.map((o) => renderOffer(o, multi && (o.promo_price ?? o.price) === bestPrice)).join('')}</div>
+      <div class="card-head">
+        <div>
+          <h2 class="title">${esc(p.name)}</h2>
+          <p class="meta">${[p.brand, p.size, p.category].filter(Boolean).map(esc).join(' · ')}</p>
+        </div>
+        <div id="ctl-${p.product_id}">${basketControl(p)}</div>
+      </div>
+      <div class="offers">${offers.map((o) => renderOffer(o, multi && effective(o) === bestPrice)).join('')}</div>
     </div>
   </article>`;
 }
@@ -132,18 +215,147 @@ function renderProduct(p) {
 async function search(q) {
   q = q.trim();
   if (q.length < 2) return;
+  showView('search');
   history.replaceState(null, '', `?q=${encodeURIComponent(q)}`);
   $('status').textContent = 'Söker…';
   $('results').innerHTML = '';
   try {
-    const rows = await rpc('search_products', { q, max_results: 40 });
-    $('status').textContent = rows.length ? `${rows.length} varor` : `Inga varor hittades för ”${q}”.`;
-    $('results').innerHTML = rows.map(renderProduct).join('');
+    lastResults = await rpc('search_products', { q, max_results: 40 });
+    $('status').textContent = lastResults.length ? `${lastResults.length} varor` : `Inga varor hittades för ”${q}”.`;
+    $('results').innerHTML = lastResults.map(renderProduct).join('');
   } catch (e) {
     $('status').textContent = 'Något gick fel vid sökningen. Försök igen om en stund.';
     console.error(e);
   }
 }
+
+$('results').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const id = b.dataset.add || b.dataset.inc || b.dataset.dec;
+  const p = lastResults.find((r) => String(r.product_id) === id);
+  if (!p) return;
+  const cur = basket[id]?.qty || 0;
+  setQty(p, b.dataset.dec ? cur - 1 : cur + 1);
+  $(`ctl-${id}`).innerHTML = basketControl(p);
+});
+
+// ---------- Kundvagnsvy ----------
+async function renderBasket() {
+  const view = $('view-basket');
+  const ids = Object.keys(basket);
+  if (!ids.length) {
+    view.innerHTML = `<div class="empty"><p><strong>Kundvagnen är tom.</strong></p><p>Sök efter varor och tryck ”+ Kundvagn” för att se vad hela handlingen kostar i varje butik.</p></div>`;
+    return;
+  }
+  view.innerHTML = '<div class="status">Hämtar priser…</div>';
+  let stores, offers;
+  try {
+    [stores, offers] = await Promise.all([
+      api('stores?select=id,chain,name&order=name'),
+      api(`offers?product_id=in.(${ids.join(',')})&select=product_id,store_id,price,promo_price,promo_text,in_stock,url`),
+    ]);
+  } catch (e) {
+    view.innerHTML = '<div class="status">Kunde inte hämta priserna. Försök igen om en stund.</div>';
+    console.error(e);
+    return;
+  }
+
+  // Bara butiker som har minst en vara i vagnen visas som kolumner
+  const byKey = new Map(offers.map((o) => [`${o.product_id}|${o.store_id}`, o]));
+  const cols = stores.filter((s) => offers.some((o) => o.store_id === s.id));
+  const totals = Object.fromEntries(cols.map((s) => [s.id, { sum: 0, found: 0 }]));
+  let mixSum = 0, mixFound = 0;
+
+  const rows = ids.map((id) => {
+    const item = basket[id];
+    const cells = cols.map((s) => {
+      const o = byKey.get(`${id}|${s.id}`);
+      return o && o.in_stock !== false && effective(o) != null ? o : null;
+    });
+    const prices = cells.filter(Boolean).map(effective);
+    const min = prices.length ? Math.min(...prices) : null;
+    if (min != null) { mixSum += min * item.qty; mixFound++; }
+    const tds = cells.map((o, i) => {
+      if (!o) return `<td class="missing">saknas</td>`;
+      const t = totals[cols[i].id]; t.sum += effective(o) * item.qty; t.found++;
+      const cheapest = prices.length > 1 && effective(o) === min;
+      return `<td class="${cheapest ? 'cheapest' : ''}"><a href="${esc(o.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${kr(effective(o) * item.qty)}</a>
+        ${item.qty > 1 ? `<span class="item-meta">${kr(effective(o))}/st</span>` : ''}
+        ${o.promo_price != null ? `<span class="cell-promo">kampanj</span>` : ''}</td>`;
+    }).join('');
+    return `<tr>
+      <td><div class="item-name">${esc(item.name)}</div><div class="item-meta">${[item.brand, item.size].filter(Boolean).map(esc).join(' · ')}</div></td>
+      <td><span class="stepper"><button data-bdec="${id}" aria-label="Minska">−</button><span>${item.qty}</span><button data-binc="${id}" aria-label="Öka">+</button></span></td>
+      ${tds}
+    </tr>`;
+  }).join('');
+
+  // Vinnare: lägst summa bland butiker som har ALLA varor
+  const n = ids.length;
+  const complete = cols.filter((s) => totals[s.id].found === n);
+  const winner = complete.length ? complete.reduce((a, b) => (totals[a.id].sum <= totals[b.id].sum ? a : b)) : null;
+  const priciest = complete.length > 1 ? complete.reduce((a, b) => (totals[a.id].sum >= totals[b.id].sum ? a : b)) : null;
+
+  const totalRow = cols.map((s) => {
+    const t = totals[s.id];
+    const isWin = winner && s.id === winner.id;
+    return `<td class="${isWin ? 'winner' : ''}">${kr(t.sum)}<div class="sub">${t.found === n ? 'alla varor' : `${t.found} av ${n} varor`}</div></td>`;
+  }).join('');
+
+  const summary = [];
+  if (winner) {
+    const save = priciest ? totals[priciest.id].sum - totals[winner.id].sum : 0;
+    summary.push(`<div class="sum-card win"><div class="label">Billigast för hela vagnen</div><div class="value">${esc(winner.name)}</div><div class="label">${kr(totals[winner.id].sum)}${save > 0.004 ? ` – spara ${kr(save)} mot ${esc(priciest.name)}` : ''}</div></div>`);
+  } else {
+    summary.push(`<div class="sum-card"><div class="label">Ingen butik har alla varor</div><div class="value">–</div><div class="label">Se kolumnerna för vad som saknas</div></div>`);
+  }
+  if (cols.length > 1) {
+    summary.push(`<div class="sum-card"><div class="label">Om du handlar billigaste varan var den finns</div><div class="value">${kr(mixSum)}</div><div class="label">${mixFound} av ${n} varor hittade</div></div>`);
+  }
+
+  view.innerHTML = `
+    <div class="summary">${summary.join('')}</div>
+    <div class="basket-wrap">
+      <table class="basket">
+        <thead><tr><th>Vara</th><th>Antal</th>${cols.map((s) => `<th><span class="store">${dot(s.chain)}${esc(s.name)}</span></th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr class="total"><td>Totalt</td><td></td>${totalRow}</tr></tfoot>
+      </table>
+    </div>
+    <div class="basket-actions">
+      <span class="note">Grönt = billigast för varan. Kampanjpriser kan kräva flerköp eller medlemskap.</span>
+      <button class="link-btn" id="clear-basket">Töm kundvagnen</button>
+    </div>`;
+}
+
+$('view-basket').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.id === 'clear-basket') {
+    if (confirm('Töm kundvagnen?')) { basket = {}; saveBasket(); renderBasket(); }
+    return;
+  }
+  const id = b.dataset.binc || b.dataset.bdec;
+  if (!id || !basket[id]) return;
+  const item = basket[id];
+  setQty({ id, ...item }, item.qty + (b.dataset.binc ? 1 : -1));
+  renderBasket();
+});
+
+// ---------- Vyer ----------
+function showView(v) {
+  const isBasket = v === 'basket';
+  $('view-search').hidden = isBasket;
+  $('search-head').hidden = isBasket;
+  $('view-basket').hidden = !isBasket;
+  $('tab-search').classList.toggle('active', !isBasket);
+  $('tab-basket').classList.toggle('active', isBasket);
+  if (isBasket) renderBasket();
+  else if (lastResults.length) $('results').innerHTML = lastResults.map(renderProduct).join('');
+}
+$('tab-search').addEventListener('click', () => showView('search'));
+$('tab-basket').addEventListener('click', () => showView('basket'));
 
 $('f').addEventListener('submit', (e) => { e.preventDefault(); search($('q').value); });
 $('chips').innerHTML = SUGGESTIONS.map((s) => `<span class="chip" role="button" tabindex="0">${s}</span>`).join('');
@@ -151,8 +363,9 @@ $('chips').addEventListener('click', (e) => {
   if (e.target.classList.contains('chip')) { $('q').value = e.target.textContent; search(e.target.textContent); }
 });
 
-const initial = new URLSearchParams(location.search).get('q');
-if (initial) { $('q').value = initial; search(initial); }
+saveBasket();
+const params = new URLSearchParams(location.search);
+if (params.get('q')) { $('q').value = params.get('q'); search(params.get('q')); }
 </script>
 </body>
 </html>
