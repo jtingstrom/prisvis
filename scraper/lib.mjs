@@ -1,4 +1,5 @@
 // Hjälpfunktioner för Axfood-scrapern (testbara utan nätverk)
+import { withMatchKeys } from './normalize.mjs';
 
 // "11,90 kr" -> 11.9
 export function parseKr(s) {
@@ -42,7 +43,7 @@ export function promoFrom(p) {
 
 export function toItem(p, category, base) {
   const { promo_price, promo_text } = promoFrom(p);
-  return {
+  return withMatchKeys({
     sku: p.code,
     ean: eanFromImage(p.image?.url),
     name: p.name,
@@ -58,6 +59,6 @@ export function toItem(p, category, base) {
     promo_price,
     promo_text,
     in_stock: !p.outOfStock,
-  };
+  });
 }
 

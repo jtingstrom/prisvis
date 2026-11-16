@@ -95,6 +95,24 @@
   .note { color: var(--muted); font-size: 13px; }
   .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
 
+  /* ICA-butiksval */
+  .storebar { max-width: 620px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; gap: 10px;
+              flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  .storebar strong { color: var(--ink); }
+  .storebar .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--promo-soft); color: var(--promo); }
+  .storebar .pill.ok { background: var(--accent-soft); color: var(--accent); }
+  .small-btn { padding: 6px 14px; font-size: 13px; background: var(--card); color: var(--accent); border: 1px solid var(--line); }
+  .picker { max-width: 620px; margin: 0 auto 18px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 14px; text-align: left; }
+  .picker-row { display: flex; gap: 8px; }
+  .picker input { flex: 1; font: inherit; padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--line); outline: none; }
+  .picker input:focus { border-color: var(--accent); }
+  .store-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 320px; overflow-y: auto; }
+  .store-list li { padding: 9px 10px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+  .store-list li:hover, .store-list li:focus { background: var(--accent-soft); outline: none; }
+  .store-list .sub { color: var(--muted); font-size: 13px; }
+  .picker-msg { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
   footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
   [hidden] { display: none !important; }
   @media (max-width: 560px) {
@@ -113,6 +131,15 @@
     <button id="tab-search" class="active">Sök</button>
     <button id="tab-basket">Kundvagn<span class="badge" id="basket-count">0</span></button>
   </nav>
+  <div class="storebar" id="storebar"></div>
+  <div class="picker" id="picker" hidden>
+    <div class="picker-row">
+      <input id="store-q" type="search" placeholder="Sök ICA-butik eller ort" autocomplete="off" aria-label="Sök ICA-butik">
+      <button class="small-btn" id="near-me" type="button">Nära mig</button>
+    </div>
+    <ul class="store-list" id="store-list"></ul>
+    <div class="picker-msg" id="picker-msg">ICA-butiker sätter egna priser. Välj den du handlar i – priserna hämtas varje natt.</div>
+  </div>
   <div id="search-head">
     <form id="f" role="search">
       <input id="q" type="search" placeholder="Sök vara, t.ex. mellanmjölk eller Arla" autocomplete="off" aria-label="Sök vara">
@@ -171,6 +198,106 @@ function setQty(product, qty) {
   saveBasket();
 }
 
+// ---------- ICA-butiksval ----------
+const ICA_KEY = 'prisvis.icaStore.v1';
+let icaStore = null; // { id: 'ica-1003417', account, name, status }
+try { icaStore = JSON.parse(localStorage.getItem(ICA_KEY)); } catch { icaStore = null; }
+let icaCatalog = null;
+
+// ICA-priser visas bara för den valda butiken
+const visibleOffer = (o) => o.chain !== 'ica' || (icaStore && o.store_id === icaStore.id);
+
+function renderStorebar() {
+  const bar = $('storebar');
+  if (!icaStore) {
+    bar.innerHTML = `<span>Välj din ICA-butik för att jämföra med ICA</span><button class="small-btn" id="open-picker">Välj ICA-butik</button>`;
+  } else {
+    const pill = icaStore.status === 'ready'
+      ? '<span class="pill ok">priser finns</span>'
+      : icaStore.status === 'full'
+        ? '<span class="pill">kö – för många butiker just nu</span>'
+        : '<span class="pill">priserna hämtas i natt</span>';
+    bar.innerHTML = `<span>${dot('ica')} <strong>${esc(icaStore.name)}</strong></span>${pill}<button class="small-btn" id="open-picker">Byt</button>`;
+  }
+}
+
+async function loadCatalog() {
+  if (!icaCatalog) icaCatalog = await api('ica_stores?select=account_id,name,city,street,format,lat,lng&order=name&limit=1000');
+  return icaCatalog;
+}
+
+function renderStoreList(stores) {
+  $('store-list').innerHTML = stores.slice(0, 30).map((s) => `
+    <li tabindex="0" data-account="${esc(s.account_id)}">
+      <span><strong>${esc(s.name)}</strong><br><span class="sub">${esc([s.street, s.city].filter(Boolean).join(', '))}</span></span>
+      ${s.km != null ? `<span class="sub">${s.km.toFixed(1)} km</span>` : ''}
+    </li>`).join('') || '<li class="sub">Inga butiker hittades.</li>';
+}
+
+async function filterStores(q) {
+  const all = await loadCatalog();
+  const t = q.trim().toLowerCase();
+  renderStoreList(t ? all.filter((s) => `${s.name} ${s.city} ${s.street}`.toLowerCase().includes(t)) : all);
+}
+
+async function openPicker() {
+  $('picker').hidden = !$('picker').hidden;
+  if (!$('picker').hidden) {
+    $('store-q').focus();
+    try { await filterStores($('store-q').value); }
+    catch (e) { $('picker-msg').textContent = 'Kunde inte hämta butikslistan.'; console.error(e); }
+  }
+}
+
+async function chooseStore(account) {
+  const s = (icaCatalog || []).find((x) => x.account_id === account);
+  if (!s) return;
+  $('picker-msg').textContent = 'Sparar…';
+  try {
+    const r = await rpc('request_ica_store', { p_account: account });
+    icaStore = { id: `ica-${account}`, account, name: s.name, status: r.status };
+    try { localStorage.setItem(ICA_KEY, JSON.stringify(icaStore)); } catch { /* ignorera */ }
+    $('picker').hidden = true;
+    renderStorebar();
+    if (!$('view-basket').hidden) renderBasket();
+    else if (lastResults.length) $('results').innerHTML = lastResults.map(renderProduct).join('');
+  } catch (e) {
+    $('picker-msg').textContent = 'Något gick fel. Försök igen.';
+    console.error(e);
+  }
+}
+
+$('storebar').addEventListener('click', (e) => { if (e.target.id === 'open-picker') openPicker(); });
+$('store-q').addEventListener('input', (e) => filterStores(e.target.value));
+$('store-list').addEventListener('click', (e) => { const li = e.target.closest('li[data-account]'); if (li) chooseStore(li.dataset.account); });
+$('store-list').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const li = e.target.closest('li[data-account]'); if (li) chooseStore(li.dataset.account); } });
+$('near-me').addEventListener('click', () => {
+  if (!navigator.geolocation) { $('picker-msg').textContent = 'Din webbläsare kan inte ange position.'; return; }
+  $('picker-msg').textContent = 'Hämtar din position…';
+  navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+    const all = await loadCatalog();
+    const rad = (d) => (d * Math.PI) / 180;
+    const dist = (s) => {
+      const dLat = rad(s.lat - coords.latitude), dLng = rad(s.lng - coords.longitude);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(coords.latitude)) * Math.cos(rad(s.lat)) * Math.sin(dLng / 2) ** 2;
+      return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+    renderStoreList(all.filter((s) => s.lat != null).map((s) => ({ ...s, km: dist(s) })).sort((a, b) => a.km - b.km));
+    $('picker-msg').textContent = 'Närmaste ICA-butiker med e-handel.';
+  }, () => { $('picker-msg').textContent = 'Kunde inte hämta din position. Sök på ort i stället.'; });
+});
+
+// Uppdatera status för vald butik (t.ex. när priserna har hämtats)
+async function refreshStoreStatus() {
+  if (!icaStore) return;
+  try {
+    const [row] = await api(`stores?id=eq.${encodeURIComponent(icaStore.id)}&select=last_scraped_at`);
+    if (row) icaStore.status = row.last_scraped_at ? 'ready' : 'pending';
+    try { localStorage.setItem(ICA_KEY, JSON.stringify(icaStore)); } catch { /* ignorera */ }
+  } catch { /* behåll senaste kända status */ }
+  renderStorebar();
+}
+
 // ---------- Sök ----------
 let lastResults = [];
 
@@ -196,7 +323,7 @@ function basketControl(p) {
 }
 
 function renderProduct(p) {
-  const offers = p.offers || [];
+  const offers = (p.offers || []).filter(visibleOffer);
   const bestPrice = Math.min(...offers.map((o) => effective(o) ?? Infinity));
   const multi = offers.length > 1;
   return `<article class="card">
@@ -222,7 +349,8 @@ async function search(q) {
   $('status').textContent = 'Söker…';
   $('results').innerHTML = '';
   try {
-    lastResults = await rpc('search_products', { q, max_results: 40 });
+    lastResults = (await rpc('search_products', { q, max_results: 60 }))
+      .filter((p) => (p.offers || []).some(visibleOffer));
     $('status').textContent = lastResults.length ? `${lastResults.length} varor` : `Inga varor hittades för ”${q}”.`;
     $('results').innerHTML = lastResults.map(renderProduct).join('');
   } catch (e) {
@@ -265,7 +393,9 @@ async function renderBasket() {
 
   // Bara butiker som har minst en vara i vagnen visas som kolumner
   const byKey = new Map(offers.map((o) => [`${o.product_id}|${o.store_id}`, o]));
-  const cols = stores.filter((s) => offers.some((o) => o.store_id === s.id));
+  const cols = stores
+    .filter((s) => s.chain !== 'ica' || (icaStore && s.id === icaStore.id))
+    .filter((s) => offers.some((o) => o.store_id === s.id));
   const totals = Object.fromEntries(cols.map((s) => [s.id, { sum: 0, found: 0 }]));
   let mixSum = 0, mixFound = 0;
 
@@ -366,6 +496,8 @@ $('chips').addEventListener('click', (e) => {
 });
 
 saveBasket();
+renderStorebar();
+refreshStoreStatus();
 const params = new URLSearchParams(location.search);
 if (params.get('q')) { $('q').value = params.get('q'); search(params.get('q')); }
 </script>
