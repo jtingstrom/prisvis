@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prisvis – jämför matpriser</title>
+<meta name="description" content="Jämför matpriser mellan Willys, Hemköp, Coop och ICA.">
+<style>
+  :root {
+    --bg: #f6f4ef; --card: #ffffff; --ink: #1d1f1c; --muted: #6b6f68; --line: #e4e1d8;
+    --accent: #1f7a4d; --accent-soft: #e3f1e9; --promo: #c2410c; --promo-soft: #fff1e8;
+    --radius: 14px;
+    --willys: #e2001a; --hemkop: #d1006b; --coop: #00aa46; --ica: #e3000b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--ink); line-height: 1.45; }
+  header { padding: 40px 20px 24px; text-align: center; }
+  .logo { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
+  .logo span { color: var(--accent); }
+  .tagline { color: var(--muted); margin: 6px 0 22px; }
+  form { max-width: 620px; margin: 0 auto; display: flex; gap: 8px; }
+  input[type=search] { flex: 1; font: inherit; font-size: 17px; padding: 14px 16px; border-radius: 999px;
+         border: 1.5px solid var(--line); background: var(--card); outline: none; }
+  input[type=search]:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  button { font: inherit; font-weight: 600; padding: 0 22px; border-radius: 999px; border: 0;
+           background: var(--accent); color: #fff; cursor: pointer; }
+  .chips { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .chip { font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line);
+          background: var(--card); color: var(--muted); cursor: pointer; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  main { max-width: 900px; margin: 0 auto; padding: 0 16px 60px; }
+  .status { text-align: center; color: var(--muted); padding: 24px 0; }
+  .grid { display: grid; gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+          padding: 16px; display: grid; grid-template-columns: 84px 1fr; gap: 16px; }
+  .card img { width: 84px; height: 84px; object-fit: contain; border-radius: 10px; background: #fafaf7; }
+  .noimg { width: 84px; height: 84px; border-radius: 10px; background: #f0eee8; }
+  .title { font-weight: 650; margin: 0; }
+  .meta { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
+  .offers { display: grid; gap: 6px; }
+  .offer { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 10px;
+           padding: 8px 10px; border-radius: 10px; text-decoration: none; color: inherit; border: 1px solid transparent; }
+  .offer:hover { border-color: var(--line); }
+  .offer.best { background: var(--accent-soft); }
+  .store { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .promo { font-size: 12px; color: var(--promo); background: var(--promo-soft); padding: 2px 8px;
+           border-radius: 999px; justify-self: start; }
+  .compare { font-size: 12px; color: var(--muted); }
+  .price { text-align: right; font-variant-numeric: tabular-nums; }
+  .price strong { font-size: 17px; }
+  .price s { color: var(--muted); font-size: 13px; margin-right: 6px; }
+  .best-label { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .out { opacity: .5; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
+  @media (max-width: 560px) {
+    .card { grid-template-columns: 56px 1fr; }
+    .card img, .noimg { width: 56px; height: 56px; }
+    .offer { grid-template-columns: 70px 1fr auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 class="logo">pris<span>vis</span></h1>
+  <p class="tagline">Jämför matpriser mellan kedjorna – gratis och utan reklam.</p>
+  <form id="f" role="search">
+    <input id="q" type="search" placeholder="Sök vara, t.ex. mellanmjölk eller Arla" autocomplete="off" aria-label="Sök vara">
+    <button>Sök</button>
+  </form>
+  <div class="chips" id="chips"></div>
+</header>
+<main>
+  <div class="status" id="status"></div>
+  <div class="grid" id="results"></div>
+</main>
+<footer id="footer">Priserna hämtas automatiskt varje morgon från kedjornas webbutiker. Kontrollera alltid priset i butiken.</footer>
+
+<script>
+const CONFIG = {
+  url: 'https://vttgsrmcqugnokexuuye.supabase.co',
+  key: 'sb_publishable_Uz7lYGNaxHA8f5E9XLV4sg_tVU0fxcZ',
+};
+const CHAIN_COLORS = { willys: 'var(--willys)', hemkop: 'var(--hemkop)', coop: 'var(--coop)', ica: 'var(--ica)' };
+const SUGGESTIONS = ['mellanmjölk', 'smör', 'kaffe', 'nötfärs', 'ägg', 'havregryn', 'bananer'];
+
+const $ = (id) => document.getElementById(id);
+const kr = (n) => n == null ? '–' : Number(n).toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function rpc(fn, body) {
+  const res = await fetch(`${CONFIG.url}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: CONFIG.key, authorization: `Bearer ${CONFIG.key}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+function renderOffer(o, isBest) {
+  const effective = o.promo_price ?? o.price;
+  const priceHtml = o.promo_price != null
+    ? `<s>${kr(o.price)}</s><strong>${kr(o.promo_price)}</strong>`
+    : `<strong>${kr(o.price)}</strong>`;
+  return `<a class="offer ${isBest ? 'best' : ''} ${o.in_stock === false ? 'out' : ''}" href="${esc(o.url)}" target="_blank" rel="noopener">
+    <span class="store"><span class="dot" style="background:${CHAIN_COLORS[o.chain] || '#999'}"></span>${esc(o.store)}</span>
+    <span>
+      ${o.promo_text ? `<span class="promo">${esc(o.promo_text)}</span>` : ''}
+      ${o.compare_price ? `<span class="compare">${kr(o.compare_price)}/${esc(o.compare_unit || '')}</span>` : ''}
+      ${o.in_stock === false ? '<span class="compare">Slut i lager</span>' : ''}
+    </span>
+    <span class="price">${isBest ? '<div class="best-label">Billigast</div>' : ''}${priceHtml}</span>
+  </a>`;
+}
+
+function renderProduct(p) {
+  const offers = p.offers || [];
+  const bestPrice = Math.min(...offers.map((o) => o.promo_price ?? o.price ?? Infinity));
+  const multi = offers.length > 1;
+  return `<article class="card">
+    ${p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy">` : '<div class="noimg"></div>'}
+    <div>
+      <h2 class="title">${esc(p.name)}</h2>
+      <p class="meta">${[p.brand, p.size, p.category].filter(Boolean).map(esc).join(' · ')}</p>
+      <div class="offers">${offers.map((o) => renderOffer(o, multi && (o.promo_price ?? o.price) === bestPrice)).join('')}</div>
+    </div>
+  </article>`;
+}
+
+async function search(q) {
+  q = q.trim();
+  if (q.length < 2) return;
+  history.replaceState(null, '', `?q=${encodeURIComponent(q)}`);
+  $('status').textContent = 'Söker…';
+  $('results').innerHTML = '';
+  try {
+    const rows = await rpc('search_products', { q, max_results: 40 });
+    $('status').textContent = rows.length ? `${rows.length} varor` : `Inga varor hittades för ”${q}”.`;
+    $('results').innerHTML = rows.map(renderProduct).join('');
+  } catch (e) {
+    $('status').textContent = 'Något gick fel vid sökningen. Försök igen om en stund.';
+    console.error(e);
+  }
+}
+
+$('f').addEventListener('submit', (e) => { e.preventDefault(); search($('q').value); });
+$('chips').innerHTML = SUGGESTIONS.map((s) => `<span class="chip" role="button" tabindex="0">${s}</span>`).join('');
+$('chips').addEventListener('click', (e) => {
+  if (e.target.classList.contains('chip')) { $('q').value = e.target.textContent; search(e.target.textContent); }
+});
+
+const initial = new URLSearchParams(location.search).get('q');
+if (initial) { $('q').value = initial; search(initial); }
+</script>
+</body>
+</html>

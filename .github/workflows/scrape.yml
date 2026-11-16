@@ -1,0 +1,47 @@
+name: Hämta priser
+
+on:
+  schedule:
+    # 04:10 UTC varje dag – inom Axfoods tillåtna besökstid 04:00–08:45 UTC
+    - cron: '10 4 * * *'
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: 'Max antal sidor per kedja (tomt = alla)'
+        required: false
+        default: ''
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test scraper/*.test.mjs
+
+  scrape:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        chain: [willys, hemkop]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Hämta ${{ matrix.chain }}
+        env:
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.max_pages }}" ]; then ARGS="--max-pages=${{ inputs.max_pages }}"; fi
+          node scraper/axfood.mjs ${{ matrix.chain }} $ARGS
