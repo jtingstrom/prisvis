@@ -21,6 +21,9 @@ const INGEST_TOKEN = process.env.INGEST_TOKEN;
 if (!dryRun && !INGEST_TOKEN) { console.error('Saknar INGEST_TOKEN'); process.exit(1); }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// GitHub Actions-anteckningar syns på körningens sida även utan inloggning
+const notice = (m) => console.log(`::notice title=Coop::${m}`);
+const warn = (m) => console.log(`::warning title=Coop::${m}`);
 
 async function supa(path, body) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -44,14 +47,39 @@ async function scrapeStore(browser, store) {
 
   // Fånga varulistorna som sidan hämtar för vald butik
   let pending = [];
+  const storesSeen = new Set();
   page.on('response', async (res) => {
     const u = res.url();
-    if (!u.includes('/personalization/search/entities/by-attribute') || !u.includes(`store=${storeNo}`)) return;
+    if (!u.includes('/personalization/search/entities/by-attribute')) return;
+    const st = new URL(u).searchParams.get('store');
+    storesSeen.add(`${st}:${res.status()}`);
+    if (st !== storeNo) return;
     try {
       const j = await res.json();
       pending.push({ count: j?.results?.count ?? 0, items: j?.results?.items || [] });
     } catch { /* ignorera */ }
   });
+
+  // Kontrollera att butiksvalet slagit igenom; annars välj butiken via Coops gränssnitt som en kund
+  pending = [];
+  await page.goto(`${COOP_BASE}/handla/varor/mejeri-agg/mjolk/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  for (let w = 0; w < 30 && !pending.length; w++) await sleep(500);
+  if (!pending.length) {
+    console.log(`  Butiksvalet via cookie gav: ${[...storesSeen].join(', ') || 'inga varulistor'} – väljer butiken i gränssnittet`);
+    try {
+      await page.getByRole('button', { name: /Sortiment visas för/ }).first().click({ timeout: 15_000 });
+      await page.getByRole('button', { name: /sök efter butik/i }).click({ timeout: 15_000 });
+      const input = page.getByLabel(/Postnummer eller butiksnamn/i);
+      await input.fill(store.search || store.name.replace(/^Stora Coop\s*/, ''));
+      await page.getByText(store.name, { exact: false }).last().click({ timeout: 15_000 });
+      await page.getByRole('button', { name: /Välj denna/i }).click({ timeout: 15_000 });
+      await sleep(3000);
+    } catch (e) {
+      warn(`${store.name}: kunde inte välja butik i gränssnittet (${e.message.split('\n')[0]})`);
+    }
+  }
+  const title = await page.title().catch(() => '?');
+  console.log(`  Sidtitel: ${title}. Varulistor sedda för butik: ${[...storesSeen].join(', ') || 'inga'}`);
 
   const runStart = new Date().toISOString();
   const seen = new Set();
@@ -71,7 +99,7 @@ async function scrapeStore(browser, store) {
       }
       pages++;
       const batch = pending.sort((a, b) => b.items.length - a.items.length)[0];
-      if (!batch) { console.warn(`  ${cat} sida ${p}: ingen varulista`); break; }
+      if (!batch) { warn(`${cat} sida ${p}: ingen varulista för butik ${storeNo} (sett: ${[...storesSeen].join(', ') || 'inga'})`); break; }
       last = Math.ceil(batch.count / PAGE_SIZE);
       const now = Date.now();
       const items = batch.items
@@ -91,7 +119,9 @@ async function scrapeStore(browser, store) {
   await context.close();
 
   const complete = pages < maxPages;
-  console.log(`  ${complete ? 'klart' : 'avbrutet'}: ${totals.total} varor, ${totals.new} nya, ${totals.matched} matchade, ${totals.changed} prisändringar`);
+  const summary = `${store.name}: ${complete ? 'klart' : 'avbrutet'} – ${pages} sidor, ${totals.total} varor, ${totals.new} nya, ${totals.matched} matchade, ${totals.changed} prisändringar`;
+  console.log('  ' + summary);
+  notice(summary);
   if (complete && !dryRun && seen.size > 500) {
     const pruned = await supa('rpc/prune_store_offers', { p_token: INGEST_TOKEN, p_store: store.id, p_before: runStart });
     await supa('rpc/mark_store_scraped', { p_token: INGEST_TOKEN, p_store: store.id });
@@ -110,4 +140,4 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => { console.error(e); warn(`Fel: ${e.message}`); process.exit(1); });
