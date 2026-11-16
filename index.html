@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prisvis – jämför matpriser</title>
-<meta name="description" content="Jämför matpriser mellan Willys, Hemköp, Coop och ICA.">
+<meta name="description" content="Jämför matpriser mellan Willys, Hemköp, ICA och Lidl.">
 <style>
   :root {
     --bg: #f6f4ef; --card: #ffffff; --ink: #1d1f1c; --muted: #6b6f68; --line: #e4e1d8;
     --accent: #1f7a4d; --accent-soft: #e3f1e9; --promo: #c2410c; --promo-soft: #fff1e8;
     --radius: 14px;
-    --willys: #e2001a; --hemkop: #d1006b; --coop: #00aa46; --ica: #e3000b;
+    --willys: #e2001a; --hemkop: #d1006b; --coop: #00aa46; --ica: #e3000b; --lidl: #0050aa;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -165,7 +165,7 @@ const CONFIG = {
   url: 'https://vttgsrmcqugnokexuuye.supabase.co',
   key: 'sb_publishable_Uz7lYGNaxHA8f5E9XLV4sg_tVU0fxcZ',
 };
-const CHAIN_COLORS = { willys: 'var(--willys)', hemkop: 'var(--hemkop)', coop: 'var(--coop)', ica: 'var(--ica)' };
+const CHAIN_COLORS = { willys: 'var(--willys)', hemkop: 'var(--hemkop)', coop: 'var(--coop)', ica: 'var(--ica)', lidl: 'var(--lidl)' };
 const SUGGESTIONS = ['mellanmjölk', 'smör', 'kaffe', 'nötfärs', 'ägg', 'havregryn', 'bananer'];
 const STORAGE_KEY = 'prisvis.basket.v1';
 
@@ -418,7 +418,7 @@ async function renderBasket() {
   let stores, offers;
   try {
     [stores, offers] = await Promise.all([
-      api('stores?select=id,chain,name&order=name'),
+      api('stores?select=id,chain,name,coverage&order=name'),
       api(`offers?product_id=in.(${ids.join(',')})&select=product_id,store_id,price,promo_price,promo_text,in_stock,url`),
     ]);
   } catch (e) {
@@ -486,7 +486,7 @@ async function renderBasket() {
     <div class="summary">${summary.join('')}</div>
     <div class="basket-wrap">
       <table class="basket">
-        <thead><tr><th>Vara</th><th>Antal</th>${cols.map((s) => `<th><span class="store">${dot(s.chain)}${esc(s.name)}</span>${offersOnly(s.id) ? '<div class="item-meta">bara veckans erbjudanden</div>' : ''}</th>`).join('')}</tr></thead>
+        <thead><tr><th>Vara</th><th>Antal</th>${cols.map((s) => `<th><span class="store">${dot(s.chain)}${esc(s.name)}</span>${s.coverage === 'offers' ? `<div class="item-meta">${s.chain === 'lidl' ? 'bara veckans sortiment' : 'bara veckans erbjudanden'}</div>` : ''}</th>`).join('')}</tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr class="total"><td>Totalt</td><td></td>${totalRow}</tr></tfoot>
       </table>
