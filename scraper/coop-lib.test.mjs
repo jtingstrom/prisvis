@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { toCoopItem, bestPromotion, storeContextCookie } from './coop-lib.mjs';
+import { toCoopItem, bestPromotion, storeContextCookie, compareUnit } from './coop-lib.mjs';
 
 const [plain, multi, member] = JSON.parse(readFileSync(new URL('./fixtures/coop-sample.json', import.meta.url)));
 const NOV_18 = Date.UTC(2026, 10, 18, 12);
@@ -37,4 +37,14 @@ test('medlemspris med slutdatum', () => {
 
 test('kampanj som inte börjat gäller inte', () => {
   assert.equal(bestPromotion(member, Date.UTC(2026, 10, 10)).promo_price, null);
+});
+
+test('jämförprisenhet i olika format, och viktvaror', () => {
+  assert.equal(compareUnit({ comparativePriceUnit: { unit: 'Kilogram' } }), 'kg');
+  assert.equal(compareUnit({ comparativePriceText: 'kr/kg' }), 'kg');
+  assert.equal(compareUnit({ comparativePriceUnit: { unit: 'liter', text: 'kr/lit' } }), 'l');
+  assert.equal(compareUnit({ comparativePriceUnit: { text: 'kr/st' } }), 'st');
+  const apple = toCoopItem({ id: '1', name: 'Äpple', salesUnit: 'Vikt', salesPriceData: { b2cPrice: 34.9 }, comparativePriceUnit: { unit: 'kg', text: 'kr/kg' }, comparativePriceData: { b2cPrice: 34.9 } }, NOV_18);
+  assert.equal(apple.price_unit, 'kr/kg');
+  assert.equal(apple.compare_unit, 'kg');
 });

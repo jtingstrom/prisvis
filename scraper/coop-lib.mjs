@@ -16,7 +16,15 @@ export function storeContextCookie(storeId) {
   return encodeURIComponent(Buffer.from(json).toString('base64'));
 }
 
-const UNIT = { liter: 'l', kilo: 'kg', styck: 'st' };
+// Coop skriver enheter på flera sätt ("kilo", "Kilogram", "kr/kg", "liter", "kr/lit", "styck")
+export function compareUnit(p) {
+  const t = `${p.comparativePriceUnit?.unit || ''} ${p.comparativePriceUnit?.text || ''} ${p.comparativePriceText || ''}`.toLowerCase();
+  if (/kilo|kg/.test(t)) return 'kg';
+  if (/lit|\bl\b/.test(t)) return 'l';
+  if (/st/.test(t)) return 'st';
+  return null;
+}
+const isWeighed = (p) => /vikt|kilo|kg/i.test(p.salesUnit || '');
 
 function topCategory(p) {
   let c = (p.navCategories || [])[0];
@@ -62,9 +70,9 @@ export function toCoopItem(p, now = Date.now()) {
     category: topCategory(p),
     url: `${COOP_BASE}/handla/sok/?q=${encodeURIComponent(p.ean || p.name)}`,
     price: p.salesPriceData?.b2cPrice ?? null,
-    price_unit: p.salesUnit === 'Kilo' ? 'kr/kg' : 'kr/st',
+    price_unit: isWeighed(p) ? 'kr/kg' : 'kr/st',
     compare_price: p.comparativePriceData?.b2cPrice ?? null,
-    compare_unit: UNIT[p.comparativePriceUnit?.unit] || null,
+    compare_unit: compareUnit(p),
     promo_price,
     promo_text,
     in_stock: p.availableOnline !== false,
