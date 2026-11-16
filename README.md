@@ -14,7 +14,11 @@ GitHub Actions (04:10 UTC varje dag)
   kedjornas robots.txt: 10 sekunder mellan anrop och bara mellan 04:00–08:45 UTC.
 - **Databas** – Supabase-projektet `prisvis` (eu-north-1). Schemat finns i `supabase/migrations/`.
   Varor paras ihop mellan kedjor via EAN-kod. Prishistorik sparas bara när priset ändras.
-- **Webbsida** – `index.html`, en statisk sida som läser direkt från Supabase.
+- **ICA** – `scraper/ica.mjs` kör 23:30 svensk tid. Användaren väljer sin ICA-butik på webbsidan;
+  butiken läggs till och hämtas från nästa natt (ca 1 timme per butik, äldst hämtade först).
+  ICA saknar streckkod, så varor matchas på varumärke, storlek och namnlikhet (`scraper/normalize.mjs`).
+- **Webbsida** – `index.html`, en statisk sida som läser direkt från Supabase. Kundvagn och
+  valt ICA-butik sparas i webbläsaren.
 
 ## Status
 
@@ -23,7 +27,7 @@ GitHub Actions (04:10 UTC varje dag)
 | Willys | ✅ klar |
 | Hemköp | ✅ klar |
 | Coop   | ⏳ nästa (schema.org-data + sitemap) |
-| ICA    | ⏳ senare (pris per butik, matchning på namn) |
+| ICA    | ✅ valda butiker hämtas nattligen (max 40), matchning på varumärke + storlek + namn |
 
 ## Inställningar
 
