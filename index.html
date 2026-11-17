@@ -141,7 +141,7 @@
       <button class="small-btn" id="near-me" type="button">Nära mig</button>
     </div>
     <ul class="store-list" id="store-list"></ul>
-    <div class="picker-msg" id="picker-msg">ICA-butiker sätter egna priser. Välj den du handlar i – priserna hämtas varje natt.</div>
+    <div class="picker-msg" id="picker-msg">ICA-butiker sätter egna priser. Välj de butiker du handlar i – deras veckoerbjudanden hämtas varje natt.</div>
   </div>
   <div id="search-head">
     <form id="f" role="search">
@@ -241,7 +241,7 @@ async function loadCatalog() {
       api('stores?chain=eq.ica&coverage=eq.offers&select=id,name,last_scraped_at&order=name'),
     ]).then(([full, offers]) => [
       ...offers.map((s) => ({ key: s.id, store_id: s.id, name: s.name, coverage: 'offers', ready: !!s.last_scraped_at })),
-      ...full.map((s) => ({ key: `ica-${s.account_id}`, account_id: s.account_id, name: s.name, city: s.city, street: s.street, lat: s.lat, lng: s.lng, coverage: 'full' })),
+      ...full.map((s) => ({ key: `ica-${s.account_id}`, account_id: s.account_id, name: s.name, city: s.city, street: s.street, lat: s.lat, lng: s.lng, coverage: 'offers' })),
     ]).catch((e) => { catalogPromise = null; throw e; });
   }
   return catalogPromise;
@@ -251,7 +251,7 @@ function renderStoreList(stores) {
   const chosen = chosenIds();
   $('store-list').innerHTML = stores.filter((s) => !chosen.has(s.key)).slice(0, 30).map((s) => `
     <li tabindex="0" data-key="${esc(s.key)}">
-      <span><strong>${esc(s.name)}</strong><br><span class="sub">${s.coverage === 'offers' ? 'Ingen e-handel – bara veckans erbjudanden' : esc([s.street, s.city].filter(Boolean).join(', '))}</span></span>
+      <span><strong>${esc(s.name)}</strong><br><span class="sub">${esc([s.street, s.city].filter(Boolean).join(', ') || 'Veckans erbjudanden')}</span></span>
       ${s.km != null ? `<span class="sub">${s.km.toFixed(1)} km</span>` : ''}
     </li>`).join('') || '<li class="sub">Inga butiker hittades.</li>';
 }
@@ -285,7 +285,7 @@ async function chooseStore(key) {
   $('picker-msg').textContent = 'Sparar…';
   try {
     let status = s.ready ? 'ready' : 'pending';
-    if (s.coverage === 'full') status = (await rpc('request_ica_store', { p_account: s.account_id })).status;
+    if (s.account_id) status = (await rpc('request_ica_store', { p_account: s.account_id })).status;
     icaStores.push({ id: key, account: s.account_id || null, name: s.name, status, coverage: s.coverage });
     $('picker').hidden = true;
     $('store-q').value = '';

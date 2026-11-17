@@ -31,7 +31,7 @@ GitHub Actions (04:10 UTC varje dag)
 | Hemköp | ✅ klar |
 | Lidl   | ✅ veckans sortiment i butik (lidl.se visar bara ett urval, ca 250 varor) |
 | Coop   | ✅ Stora Coop Sisjön – `scraper/coop.mjs` kör Playwright (riktig webbläsare) kl. 04:00, ca 300 sidor |
-| ICA    | ✅ valda butiker hämtas nattligen (max 40), matchning på varumärke + storlek + namn |
+| ICA    | ✅ veckans erbjudanden (med streckkoder) för valda butiker – ICA:s e-handel nekar automatiska hämtningar |
 
 ## Inställningar
 

@@ -68,3 +68,10 @@ test('erbjudandesida: plockar ut weeklyOffers utan att köra sidans kod', () => 
   assert.equal(fil.promo_price, 20);    // 2 för 40 kr
   assert.equal(fil.name, 'Fil Hall/Pass 3.5%');
 });
+
+import { offerSlugCandidates } from './ica-lib.mjs';
+test('adresser till erbjudandesidan', () => {
+  assert.deepEqual(offerSlugCandidates('Maxi ICA Stormarknad Högsbo, Göteborg', '1003954'),
+    ['maxi-ica-stormarknad-hogsbo-goteborg-1003954', 'maxi-ica-stormarknad-hogsbo-1003954']);
+  assert.deepEqual(offerSlugCandidates('ICA Kvantum Mölndal', '1004589'), ['ica-kvantum-molndal-1004589']);
+});

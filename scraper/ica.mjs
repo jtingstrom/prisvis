@@ -4,7 +4,7 @@
 // Användning: node scraper/ica.mjs [--max-stores=N] [--max-pages=N] [--budget-min=300] [--dry-run]
 
 import { readFileSync } from 'node:fs';
-import { ICA_BASE, parseState, productsFromState, foodLeaves, toIcaItem, toIcaStore, extractJsonArray, offersToItems } from './ica-lib.mjs';
+import { ICA_BASE, parseState, productsFromState, foodLeaves, toIcaItem, toIcaStore, extractJsonArray, offersToItems, offerSlugCandidates } from './ica-lib.mjs';
 
 const DELAY_MS = 3_000; // ICA anger ingen crawl-delay; vi håller ändå en lugn takt
 const USER_AGENT = 'PrisvisBot/0.1 (+https://github.com/jtingstrom/prisvis)';
@@ -122,26 +122,42 @@ async function scrapeStore(store) {
   return { done: true, totals };
 }
 
-// Butiker utan e-handel: bara veckans erbjudanden från ica.se (en sida per butik)
+// ICA-butiker: veckans erbjudanden från ica.se (en sida per butik).
+// ICA:s e-handel nekar automatiska hämtningar, så hela sortimentet hämtas inte.
+async function fetchOffersPage(slug) {
+  const wait = lastRequest + DELAY_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastRequest = Date.now();
+  const url = `https://www.ica.se/erbjudanden/${slug}/`;
+  const res = await fetch(url, { headers: { 'user-agent': USER_AGENT, accept: 'text/html' } });
+  if (!res.ok) return { url, status: res.status, offers: null };
+  return { url, status: res.status, offers: extractJsonArray(await res.text(), 'weeklyOffers') };
+}
+
 async function scrapeOfferStores() {
-  const stores = await supa('stores?chain=eq.ica&coverage=eq.offers&select=id,name,ica_offers_slug');
+  const stores = await supa('stores?chain=eq.ica&coverage=eq.offers&select=id,name,ica_offers_slug,ica_account');
   for (const store of stores) {
     const runStart = new Date().toISOString();
-    const pageUrl = `https://www.ica.se/erbjudanden/${store.ica_offers_slug}/`;
-    const wait = lastRequest + DELAY_MS - Date.now();
-    if (wait > 0) await sleep(wait);
-    lastRequest = Date.now();
-    const res = await fetch(pageUrl, { headers: { 'user-agent': USER_AGENT, accept: 'text/html' } });
-    if (!res.ok) { console.warn(`  ${store.name}: ${res.status}`); continue; }
-    const offers = extractJsonArray(await res.text(), 'weeklyOffers');
-    const items = offersToItems(offers, pageUrl);
-    console.log(`== ${store.name}: ${offers?.length ?? 0} erbjudanden, ${items.length} varor`);
+    const candidates = store.ica_offers_slug ? [store.ica_offers_slug] : offerSlugCandidates(store.name, store.ica_account);
+    let page = null;
+    for (const slug of candidates) {
+      page = await fetchOffersPage(slug);
+      if (page.offers) break;
+    }
+    if (!page?.offers) {
+      console.log(`::warning title=ICA::${store.name}: hittade ingen erbjudandesida (provade ${candidates.join(', ')}, senast ${page?.status})`);
+      continue;
+    }
+    const items = offersToItems(page.offers, page.url);
+    console.log(`== ${store.name}: ${page.offers.length} erbjudanden, ${items.length} varor (${page.url})`);
     if (dryRun) { if (items[0]) console.log('   exempel:', JSON.stringify(items[0])); continue; }
     if (!items.length) continue; // rensa inte om sidan av någon anledning var tom
     const r = await supa('rpc/ingest_offers', { p_token: INGEST_TOKEN, p_store: store.id, p_items: items });
     const pruned = await supa('rpc/prune_store_offers', { p_token: INGEST_TOKEN, p_store: store.id, p_before: runStart });
     await supa('rpc/mark_store_scraped', { p_token: INGEST_TOKEN, p_store: store.id });
-    console.log(`  ${r.new} nya, ${r.changed} ändrade, ${pruned} utgångna borttagna`);
+    const msg = `${store.name}: ${page.offers.length} erbjudanden, ${r.new} nya, ${r.changed} ändrade, ${pruned} utgångna borttagna`;
+    console.log('  ' + msg);
+    console.log(`::notice title=ICA::${msg}`);
   }
 }
 

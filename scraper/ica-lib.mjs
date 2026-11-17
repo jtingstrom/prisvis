@@ -168,3 +168,13 @@ export function offersToItems(weeklyOffers, pageUrl) {
   }
   return items;
 }
+
+/** Tänkbara adresser för butikens erbjudandesida på ica.se, t.ex. "maxi-ica-stormarknad-hogsbo-goteborg-1003954" */
+export function offerSlugCandidates(name, account) {
+  const slug = (t) => t.toLowerCase()
+    .replace(/[åä]/g, 'a').replace(/ö/g, 'o').replace(/é/g, 'e')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const full = slug(name);
+  const noCity = slug(name.split(',')[0]);
+  return [...new Set([full, noCity])].map((s) => `${s}-${account}`);
+}
