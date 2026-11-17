@@ -32,6 +32,7 @@ if (!dryRun && !INGEST_TOKEN) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let lastRequest = 0;
+let blocked = 0; // antal 403-svar i rad
 
 async function icaFetch(path, { json = false } = {}) {
   const wait = lastRequest + DELAY_MS - Date.now();
@@ -44,6 +45,7 @@ async function icaFetch(path, { json = false } = {}) {
     if (res.ok) return json ? res.json() : res.text();
     console.warn(`  ${res.status} på ${path} (försök ${attempt})`);
     if (res.status === 404) return null;
+    if (res.status === 403) { blocked++; return null; } // spärrad – försök inte igen
     await sleep(DELAY_MS * attempt * 5);
   }
   throw new Error(`Gav upp på ${path}`);
@@ -77,6 +79,7 @@ async function refreshStoreCatalog() {
 async function scrapeStore(store) {
   const acc = store.ica_account;
   console.log(`== ${store.name} (${acc})`);
+  blocked = 0;
   const tree = await icaFetch(`/stores/${acc}/api/webproductpagews/v1/categories?categoryDepth=4`, { json: true });
   const leaves = foodLeaves(tree);
   console.log(`  ${leaves.length} kategorier, ca ${leaves.reduce((s, l) => s + l.count, 0)} varor`);
@@ -93,7 +96,14 @@ async function scrapeStore(store) {
     for (const sort of sorts) {
       const html = await icaFetch(`/stores/${acc}/categories/x/${leaf.id}${sort ? `?sortBy=${sort}` : ''}`);
       pages++;
-      if (!html) continue;
+      if (!html) {
+        if (blocked >= 5) {
+          console.log(`::warning title=ICA::${store.name}: ICA nekar åtkomst (403) – hoppar över butiken`);
+          return { done: false, totals, blocked: true };
+        }
+        continue;
+      }
+      blocked = 0;
       const { entities } = productsFromState(parseState(html));
       const items = entities
         .filter((e) => e.retailerProductId && !seen.has(e.retailerProductId))
