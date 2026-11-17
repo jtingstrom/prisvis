@@ -83,8 +83,20 @@ async function ingest(items) {
   return res.json();
 }
 
+async function rpc(fn, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${SUPABASE_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
 async function main() {
-  console.log(`== ${chainId}: startar ${new Date().toISOString()}`);
+  const runStart = new Date().toISOString();
+  console.log(`== ${chainId}: startar ${runStart}`);
   const tree = await getJson('/leftMenu/categorytree');
   const categories = (tree?.children || [])
     .map((c) => ({ slug: String(c.url).replace(/^\//, ''), title: c.title }))
@@ -122,6 +134,13 @@ async function main() {
   }
 
   console.log(`== ${chainId}: klart. ${totals.total} varor, ${totals.new} nya, ${totals.changed} prisändringar.`);
+  // Hela sortimentet hämtat: markera butiken och ta bort varor som inte längre finns
+  if (!dryRun && maxPages === Infinity && seen.size > 1000) {
+    const pruned = await rpc('prune_store_offers', { p_token: INGEST_TOKEN, p_store: chainId, p_before: runStart });
+    await rpc('mark_store_scraped', { p_token: INGEST_TOKEN, p_store: chainId });
+    console.log(`   ${pruned} varor som inte längre finns togs bort`);
+  }
+  console.log(`::notice title=${chainId}::${totals.total} varor, ${totals.new} nya, ${totals.changed} prisändringar`);
 }
 
 main().catch((e) => {
