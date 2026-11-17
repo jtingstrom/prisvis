@@ -2,8 +2,8 @@ name: Hämta priser
 
 on:
   schedule:
-    # 04:10 UTC varje dag – inom Axfoods tillåtna besökstid 04:00–08:45 UTC
-    - cron: '10 4 * * *'
+    # 04:03 UTC varje dag – tidigt i Axfoods tillåtna besökstid 04:00–08:45 UTC, så en försenad start ändå hinner
+    - cron: '3 4 * * *'
   workflow_dispatch:
     inputs:
       max_pages:

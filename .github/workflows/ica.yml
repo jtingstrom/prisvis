@@ -2,8 +2,8 @@ name: Hämta ICA-priser
 
 on:
   schedule:
-    # 22:30 UTC (23:30 svensk vintertid) – klart innan Axfood-körningen 04:10 UTC
-    - cron: '30 22 * * *'
+    # 21:37 UTC (22:37 svensk vintertid) – udda minut för att slippa GitHubs köer
+    - cron: '37 21 * * *'
   workflow_dispatch:
     inputs:
       max_stores:

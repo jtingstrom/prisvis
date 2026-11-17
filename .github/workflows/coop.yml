@@ -2,8 +2,8 @@ name: Hämta Coop-priser
 
 on:
   schedule:
-    # 03:00 UTC (04:00 svensk vintertid)
-    - cron: '0 3 * * *'
+    # 02:23 UTC (03:23 svensk vintertid) – udda minut för att slippa GitHubs köer på hel timme
+    - cron: '23 2 * * *'
   workflow_dispatch:
     inputs:
       max_pages:
