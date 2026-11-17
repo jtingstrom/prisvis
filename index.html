@@ -34,6 +34,10 @@
   .chips { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
   .chip { font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line);
           background: var(--card); color: var(--muted); cursor: pointer; }
+  .cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+  .cats .chip { cursor: pointer; background: var(--card, #fff); }
+  .cats .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .cats .chip small { opacity: .7; margin-left: 4px; }
   .chip:hover { border-color: var(--accent); color: var(--accent); }
   main { max-width: 960px; margin: 0 auto; padding: 0 16px 60px; }
   .status { text-align: center; color: var(--muted); padding: 20px 0; }
@@ -154,6 +158,7 @@
 <main>
   <section id="view-search">
     <div class="status" id="status"></div>
+    <div class="cats" id="cats"></div>
     <div class="grid" id="results"></div>
   </section>
   <section id="view-basket" hidden></section>
@@ -275,7 +280,7 @@ function afterStoreChange() {
   saveIca();
   renderStorebar();
   if (!$('view-basket').hidden) renderBasket();
-  else if (lastResults.length) $('results').innerHTML = lastResults.filter((p) => (p.offers || []).some(visibleOffer)).map(renderProduct).join('');
+  else if (lastResults.length) renderResults();
 }
 
 async function chooseStore(key) {
@@ -384,16 +389,41 @@ async function search(q) {
   history.replaceState(null, '', `?q=${encodeURIComponent(q)}`);
   $('status').textContent = 'Söker…';
   $('results').innerHTML = '';
+  $('cats').innerHTML = '';
+  activeCat = null;
   try {
-    lastResults = (await rpc('search_products', { q, max_results: 60 }))
-      .filter((p) => (p.offers || []).some(visibleOffer));
-    $('status').textContent = lastResults.length ? `${lastResults.length} varor` : `Inga varor hittades för ”${q}”.`;
-    $('results').innerHTML = lastResults.map(renderProduct).join('');
+    lastResults = await rpc('search_products', { q, max_results: 120 });
+    lastQuery = q;
+    renderResults();
   } catch (e) {
     $('status').textContent = 'Något gick fel vid sökningen. Försök igen om en stund.';
     console.error(e);
   }
 }
+
+// Kategoriknappar: räknas fram ur sökträffarna, klick filtrerar
+let activeCat = null, lastQuery = '';
+function renderResults() {
+  const shown = lastResults.filter((p) => (p.offers || []).some(visibleOffer));
+  const counts = new Map();
+  for (const p of shown) { const g = p.category_group || 'Övrigt'; counts.set(g, (counts.get(g) || 0) + 1); }
+  if (activeCat && !counts.has(activeCat)) activeCat = null;
+  // Ordning: som sökrankningen (första träffens plats), så bästa kategorin hamnar först
+  const order = [...counts.keys()];
+  $('cats').innerHTML = order.length > 1
+    ? `<button class="chip${activeCat ? '' : ' on'}" data-cat="">Alla<small>${shown.length}</small></button>` +
+      order.map((g) => `<button class="chip${g === activeCat ? ' on' : ''}" data-cat="${esc(g)}">${esc(g)}<small>${counts.get(g)}</small></button>`).join('')
+    : '';
+  const list = activeCat ? shown.filter((p) => (p.category_group || 'Övrigt') === activeCat) : shown;
+  $('status').textContent = shown.length ? `${list.length} varor` : `Inga varor hittades för ”${lastQuery}”.`;
+  $('results').innerHTML = list.map(renderProduct).join('');
+}
+$('cats').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-cat]');
+  if (!b) return;
+  activeCat = b.dataset.cat || null;
+  renderResults();
+});
 
 $('results').addEventListener('click', (e) => {
   const b = e.target.closest('button');
@@ -520,7 +550,7 @@ function showView(v) {
   $('tab-search').classList.toggle('active', !isBasket);
   $('tab-basket').classList.toggle('active', isBasket);
   if (isBasket) renderBasket();
-  else if (lastResults.length) $('results').innerHTML = lastResults.map(renderProduct).join('');
+  else if (lastResults.length) renderResults();
 }
 $('tab-search').addEventListener('click', () => showView('search'));
 $('tab-basket').addEventListener('click', () => showView('basket'));
