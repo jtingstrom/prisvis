@@ -2,8 +2,10 @@ name: Hämta priser
 
 on:
   schedule:
-    # 04:03 UTC varje dag – tidigt i Axfoods tillåtna besökstid 04:00–08:45 UTC, så en försenad start ändå hinner
-    - cron: '3 4 * * *'
+    # GitHub startar schemalagda körningar ofta flera timmar sent. Därför triggas
+    # flödet varje timme; jobbet "gate" släpper bara igenom en körning per dag
+    # inom Axfoods besökstid 04:00–08:45 UTC, resten avslutas direkt utan fel.
+    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       max_pages:
@@ -16,7 +18,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      axfood: ${{ steps.axfood.outputs.run }}
+      lidl: ${{ steps.lidl.outputs.run }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - id: axfood
+        run: node scraper/should-run.mjs willys hemkop
+      - id: lidl
+        run: node scraper/should-run.mjs lidl --any-time
+
   test:
+    needs: gate
+    if: needs.gate.outputs.axfood == 'true' || needs.gate.outputs.lidl == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -26,7 +45,8 @@ jobs:
       - run: node --test scraper/*.test.mjs
 
   lidl:
-    needs: test
+    needs: [gate, test]
+    if: needs.gate.outputs.lidl == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -40,7 +60,8 @@ jobs:
         run: node scraper/lidl.mjs
 
   scrape:
-    needs: test
+    needs: [gate, test]
+    if: needs.gate.outputs.axfood == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:

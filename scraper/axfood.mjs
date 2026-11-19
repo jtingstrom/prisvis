@@ -30,7 +30,8 @@ const now = new Date();
 const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
 if (!force && (minutes < 4 * 60 || minutes > 8 * 60 + 45)) {
   console.error(`Klockan är ${now.toISOString().slice(11, 16)} UTC – utanför Axfoods besökstid 04:00–08:45 UTC. Avbryter (använd --force för att köra ändå).`);
-  process.exit(1);
+  console.log('::warning title=Utanför besökstid::Willys/Hemköp får bara hämtas 05:00–09:45 svensk tid (vintertid).');
+  process.exit(0);
 }
 
 if (!CHAINS[chainId]) {
