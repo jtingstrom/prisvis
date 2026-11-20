@@ -5,165 +5,208 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prisvis – jämför matpriser</title>
 <meta name="description" content="Jämför matpriser mellan Willys, Hemköp, Coop, ICA och Lidl.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
 <style>
+  /* Prisvis: hyllkantsetiketten är formspråket. Priser sätts som på butikshyllan,
+     smala feta siffror med upphöjda ören. Gult betyder kampanj, som i butiken.
+     Mörkblå etikett betyder billigast. Allt annat hålls lugnt. */
   :root {
-    --bg: #f6f4ef; --card: #ffffff; --ink: #1d1f1c; --muted: #6b6f68; --line: #e4e1d8;
-    --accent: #1f7a4d; --accent-soft: #e3f1e9; --promo: #c2410c; --promo-soft: #fff1e8;
-    --radius: 14px;
+    --paper: #ffffff; --shelf: #e9edf0; --rule: #d3dae0;
+    --ink: #102a43; --muted: #5b6b7a; --kampanj: #ffd500;
     --willys: #e2001a; --hemkop: #d1006b; --coop: #00aa46; --ica: #e3000b; --lidl: #0050aa;
+    --narrow: "wdth" 66; --wide: "wdth" 100;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-         background: var(--bg); color: var(--ink); line-height: 1.45; }
-  header { padding: 32px 20px 20px; text-align: center; }
-  .logo { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
-  .logo span { color: var(--accent); }
-  .tagline { color: var(--muted); margin: 6px 0 18px; }
-  nav.tabs { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px; margin-bottom: 18px; }
-  nav.tabs button { background: transparent; color: var(--muted); padding: 8px 18px; }
-  nav.tabs button.active { background: var(--accent); color: #fff; }
-  .badge { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px;
-           background: var(--accent-soft); color: var(--accent); font-size: 12px; line-height: 20px; }
-  nav.tabs button.active .badge { background: rgba(255,255,255,.25); color: #fff; }
-  form { max-width: 620px; margin: 0 auto; display: flex; gap: 8px; }
-  input[type=search] { flex: 1; font: inherit; font-size: 17px; padding: 14px 16px; border-radius: 999px;
-         border: 1.5px solid var(--line); background: var(--card); outline: none; }
-  input[type=search]:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-  button { font: inherit; font-weight: 600; padding: 0 22px; border-radius: 999px; border: 0;
-           background: var(--accent); color: #fff; cursor: pointer; }
-  .chips { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
-  .chip { font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line);
-          background: var(--card); color: var(--muted); cursor: pointer; }
-  .cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
-  .cats .chip { cursor: pointer; background: var(--card, #fff); }
-  .cats .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .cats .chip small { opacity: .7; margin-left: 4px; }
-  .chip:hover { border-color: var(--accent); color: var(--accent); }
-  main { max-width: 960px; margin: 0 auto; padding: 0 16px 60px; }
-  .status { text-align: center; color: var(--muted); padding: 20px 0; }
-  .grid { display: grid; gap: 12px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-          padding: 16px; display: grid; grid-template-columns: 84px 1fr; gap: 16px; }
-  .card img { width: 84px; height: 84px; object-fit: contain; border-radius: 10px; background: #fafaf7; }
-  .noimg { width: 84px; height: 84px; border-radius: 10px; background: #f0eee8; }
-  .card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
-  .title { font-weight: 650; margin: 0; font-size: 18px; }
-  .meta { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
-  .add { padding: 7px 14px; font-size: 14px; white-space: nowrap; }
-  .add.in { background: var(--accent-soft); color: var(--accent); }
-  .stepper { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); border-radius: 999px; padding: 3px; }
-  .stepper button { width: 30px; height: 30px; padding: 0; font-size: 17px; background: var(--card); color: var(--accent); }
-  .stepper span { min-width: 22px; text-align: center; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .offers { display: grid; gap: 6px; }
-  .offer { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 10px;
-           padding: 8px 10px; border-radius: 10px; text-decoration: none; color: inherit; border: 1px solid transparent; }
-  .offer:hover { border-color: var(--line); }
-  .offer.best { background: var(--accent-soft); }
-  .store { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
-  .promo { font-size: 12px; color: var(--promo); background: var(--promo-soft); padding: 2px 8px;
-           border-radius: 999px; justify-self: start; }
-  .compare { font-size: 12px; color: var(--muted); }
-  .price { text-align: right; font-variant-numeric: tabular-nums; }
-  .price strong { font-size: 17px; }
-  .price s { color: var(--muted); font-size: 13px; margin-right: 6px; }
-  .best-label { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
-  .out { opacity: .5; }
+  body { margin: 0; font-family: "Archivo", system-ui, sans-serif; font-variation-settings: var(--wide);
+         font-size: 16px; line-height: 1.5; background: var(--paper); color: var(--ink); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  [hidden] { display: none !important; }
 
-  /* Kundvagn */
-  .basket-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
-  table.basket { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 560px; }
-  table.basket th, table.basket td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: middle; }
-  table.basket th:first-child, table.basket td:first-child { text-align: left; }
-  table.basket thead th { font-size: 14px; position: sticky; top: 0; background: var(--card); }
-  table.basket thead th .store { justify-content: flex-end; }
-  .item-name { font-weight: 600; }
-  .item-meta { font-size: 12px; color: var(--muted); }
-  td.cheapest { background: var(--accent-soft); font-weight: 700; color: var(--accent); }
-  td.missing { color: var(--muted); font-size: 13px; }
-  .cell-promo { display: block; font-size: 11px; color: var(--promo); }
-  tfoot td { font-weight: 700; border-bottom: 0; }
-  tfoot tr.total td { font-size: 18px; }
-  tfoot tr.total td.winner { background: var(--accent); color: #fff; }
-  tfoot .sub { font-size: 12px; font-weight: 500; color: var(--muted); }
-  tfoot td.winner .sub { color: rgba(255,255,255,.85); }
-  tfoot tr.total td.incomplete { color: var(--muted); font-size: 15px; font-weight: 600; }
-  tfoot td.incomplete .sub { color: var(--promo); }
-  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px; }
-  .sum-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
-  .sum-card .label { font-size: 13px; color: var(--muted); }
-  .sum-card .value { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
-  .sum-card.win { border-color: var(--accent); background: var(--accent-soft); }
-  .basket-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 12px; flex-wrap: wrap; }
-  .link-btn { background: none; color: var(--muted); padding: 0; font-weight: 500; text-decoration: underline; }
-  .note { color: var(--muted); font-size: 13px; }
-  .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+  /* Prissiffror */
+  .pt { font-variation-settings: var(--narrow); font-weight: 800; font-size: 34px; line-height: 1;
+        letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pt sup { font-size: .5em; vertical-align: .75em; margin-left: 1px; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 2px; }
 
-  /* ICA-butiksval */
-  .storebar { max-width: 620px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; gap: 10px;
-              flex-wrap: wrap; font-size: 14px; color: var(--muted); }
-  .storebar strong { color: var(--ink); }
-  .storebar .pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--promo-soft); color: var(--promo); }
-  .storebar .pill.ok { background: var(--accent-soft); color: var(--accent); }
-  .store-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line);
-                border-radius: 999px; padding: 4px 6px 4px 12px; }
-  .chip-x { background: none; color: var(--muted); padding: 0 6px; font-size: 16px; line-height: 1; }
-  .small-btn { padding: 6px 14px; font-size: 13px; background: var(--card); color: var(--accent); border: 1px solid var(--line); }
-  .picker { max-width: 620px; margin: 0 auto 18px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-            padding: 14px; text-align: left; }
+  /* Sidhuvud */
+  header { border-bottom: 6px solid var(--shelf); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0 6px; }
+  .logo { margin: 0; font-size: 30px; font-weight: 850; font-variation-settings: "wdth" 70; letter-spacing: -0.01em; }
+  .logo a { color: inherit; text-decoration: none; }
+  nav.tabs { display: flex; gap: 22px; }
+  nav.tabs button { background: none; border: 0; padding: 6px 0; font-weight: 600; color: var(--muted);
+                    border-bottom: 3px solid transparent; }
+  nav.tabs button.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .badge { display: inline-block; min-width: 22px; margin-left: 6px; padding: 0 6px; border-radius: 3px;
+           background: var(--kampanj); color: var(--ink); font-size: 13px; font-weight: 800; line-height: 20px; text-align: center; }
+  .tagline { margin: 0 0 18px; color: var(--muted); max-width: 52ch; }
+
+  #search-head { padding-bottom: 22px; }
+  form { display: flex; max-width: 720px; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+  input[type=search] { flex: 1; min-width: 0; font: inherit; font-size: 20px; padding: 14px 16px; border: 0; outline: none; background: var(--paper); color: var(--ink); }
+  form:focus-within { box-shadow: 0 0 0 3px var(--kampanj); }
+  form button { border: 0; background: var(--ink); color: #fff; font-weight: 700; padding: 0 26px; font-size: 17px; }
+  .chips { margin-top: 10px; color: var(--muted); font-size: 15px; }
+  .chips .chip { background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline;
+                 text-underline-offset: 3px; text-decoration-color: var(--rule); }
+  .chips .chip:hover { text-decoration-color: var(--ink); }
+
+  /* ICA-butiker */
+  .storebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 0 16px; font-size: 14px; color: var(--muted); }
+  .store-chip { display: inline-flex; align-items: center; gap: 8px; padding: 4px 4px 4px 10px; border: 1px solid var(--rule);
+                border-left: 4px solid var(--ica); border-radius: 4px; color: var(--ink); }
+  .pill { font-size: 12px; color: var(--muted); }
+  .chip-x { background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 8px; }
+  .chip-x:hover { color: var(--ink); }
+  .small-btn { background: none; border: 1px solid var(--ink); border-radius: 4px; padding: 5px 12px; font-size: 14px; font-weight: 600; }
+  .small-btn:hover { background: var(--shelf); }
+  .picker { max-width: 720px; margin: 0 0 20px; border: 2px solid var(--ink); border-radius: 6px; padding: 14px; }
   .picker-row { display: flex; gap: 8px; }
-  .picker input { flex: 1; font: inherit; padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--line); outline: none; }
-  .picker input:focus { border-color: var(--accent); }
+  .picker input { flex: 1; font: inherit; padding: 9px 12px; border: 1px solid var(--rule); border-radius: 4px; outline: none; }
+  .picker input:focus { border-color: var(--ink); }
   .store-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 320px; overflow-y: auto; }
-  .store-list li { padding: 9px 10px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
-  .store-list li:hover, .store-list li:focus { background: var(--accent-soft); outline: none; }
-  .store-list .sub { color: var(--muted); font-size: 13px; }
+  .store-list li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 8px; border-bottom: 1px solid var(--shelf); cursor: pointer; }
+  .store-list li:hover, .store-list li:focus { background: var(--shelf); outline: none; }
+  .sub, .store-list .sub { color: var(--muted); font-size: 13px; }
   .picker-msg { font-size: 13px; color: var(--muted); margin-top: 8px; }
 
-  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
-  [hidden] { display: none !important; }
-  @media (max-width: 560px) {
-    .card { grid-template-columns: 56px 1fr; }
-    .card img, .noimg { width: 56px; height: 56px; }
-    .card-head { flex-direction: column; }
-    .offer { grid-template-columns: 70px 1fr auto; }
+  /* Sökresultat */
+  main { max-width: 1080px; margin: 0 auto; padding: 0 20px 64px; }
+  .status { color: var(--muted); padding: 18px 0 8px; }
+  .cats { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: thin; }
+  .cats .chip { flex: none; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 10px;
+                font-size: 14px; font-weight: 600; color: var(--ink); }
+  .cats .chip small { margin-left: 6px; font-weight: 500; color: var(--muted); }
+  .cats .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .cats .chip.on small { color: #c9d3dc; }
+
+  .card { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 4px 18px; padding: 20px 0;
+          border-bottom: 1px solid var(--rule); }
+  .card img, .noimg { width: 72px; height: 72px; object-fit: contain; }
+  .noimg { background: var(--shelf); border-radius: 4px; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+  .title { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .meta { margin: 2px 0 8px; color: var(--muted); font-size: 14px; }
+  .meta span + span::before { content: ", "; }
+  .add { flex: none; white-space: nowrap; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 4px; padding: 6px 12px; font-size: 14px; font-weight: 700; }
+  .add:hover { background: var(--shelf); }
+  .stepper { flex: none; display: inline-flex; align-items: center; border: 1.5px solid var(--ink); border-radius: 4px; }
+  .stepper button { width: 32px; height: 30px; padding: 0; background: none; border: 0; font-size: 18px; font-weight: 700; }
+  .stepper button:hover { background: var(--shelf); }
+  .stepper span { min-width: 26px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* Hyllkantsetiketterna */
+  .card .offers { grid-column: 2; display: flex; flex-wrap: wrap; gap: 10px; }
+  .offer { --c: var(--muted); position: relative; display: flex; flex-direction: column; gap: 2px; width: 150px; min-height: 108px;
+           padding: 10px 12px 10px; border: 1px solid var(--rule); border-top: 5px solid var(--c); border-radius: 3px;
+           background: var(--paper); color: var(--ink); text-decoration: none; }
+  .offer:hover { border-color: var(--ink); border-top-color: var(--c); }
+  .offer .store { font-size: 13px; font-weight: 700; line-height: 1.25; }
+  .offer .tagline-best { font-size: 12px; font-weight: 700; }
+  .offer .was { font-size: 13px; color: var(--muted); text-decoration: line-through; }
+  .offer .pt { margin-top: auto; }
+  .offer .compare { font-size: 12px; color: var(--muted); }
+  .offer .promo { font-size: 12px; font-weight: 700; }
+  .offer.kampanj { background: var(--kampanj); border-color: var(--kampanj); border-top-color: var(--c); }
+  .offer.kampanj .compare, .offer.kampanj .was { color: var(--ink); }
+  .offer.best { background: var(--ink); border-color: var(--ink); border-top-color: var(--c); color: #fff; }
+  .offer.best .compare, .offer.best .was { color: #c9d3dc; }
+  .offer.best.kampanj .pt { color: var(--kampanj); }
+  .offer.best .promo { color: var(--kampanj); }
+  .offer.out { opacity: .45; }
+
+  /* Kundvagn */
+  .verdict { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 40px; padding: 26px 0 22px; }
+  .verdict .lead { font-size: 15px; color: var(--muted); margin: 0 0 4px; }
+  .verdict .who { font-size: 30px; font-weight: 800; font-variation-settings: "wdth" 80; line-height: 1.1; margin: 0; }
+  .verdict .pt { font-size: 56px; }
+  .verdict .save { margin: 6px 0 0; font-weight: 600; }
+  .verdict .mix { margin: 0; color: var(--muted); font-size: 15px; max-width: 36ch; }
+  .verdict .mix strong { color: var(--ink); }
+  .basket-wrap { overflow-x: auto; border-top: 2px solid var(--ink); }
+  table.basket { width: 100%; min-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.basket th, table.basket td { padding: 10px 12px; border-bottom: 1px solid var(--rule); text-align: right; vertical-align: middle; }
+  table.basket th:first-child, table.basket td:first-child { text-align: left; }
+  table.basket thead th { position: sticky; top: 0; background: var(--paper); font-size: 14px; font-weight: 700; vertical-align: bottom; }
+  table.basket thead th.col { border-top: 5px solid var(--c, var(--muted)); }
+  .item-name { font-weight: 600; }
+  .item-meta { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+  td.cheapest { font-weight: 800; box-shadow: inset 0 -3px 0 var(--ink); }
+  td.missing { color: var(--muted); font-size: 13px; }
+  .cell-promo { display: inline-block; margin-top: 2px; padding: 0 5px; border-radius: 2px; background: var(--kampanj); font-size: 11px; font-weight: 700; color: var(--ink); }
+  tfoot td { border-bottom: 0; font-weight: 700; padding-top: 14px; padding-bottom: 14px; }
+  tfoot tr.total td .pt { font-size: 26px; }
+  tfoot tr.total td.winner { background: var(--ink); color: #fff; }
+  tfoot .sub { font-size: 12px; font-weight: 500; color: var(--muted); }
+  tfoot td.winner .sub { color: #c9d3dc; }
+  tfoot td.incomplete .pt { color: var(--muted); font-size: 20px; }
+  .basket-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; }
+  .link-btn:hover { color: var(--ink); }
+  .note { color: var(--muted); font-size: 13px; }
+  .empty { padding: 48px 0; max-width: 46ch; }
+  .empty strong { font-size: 22px; display: block; margin-bottom: 6px; }
+  .empty p { margin: 0; color: var(--muted); }
+
+  footer { border-top: 6px solid var(--shelf); }
+  footer p { max-width: 1080px; margin: 0 auto; padding: 18px 20px 28px; color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 600px) {
+    .topbar { padding-top: 14px; }
+    .logo { font-size: 26px; }
+    input[type=search] { font-size: 17px; padding: 12px; }
+    form button { padding: 0 16px; }
+    .card { grid-template-columns: 52px minmax(0, 1fr); gap: 4px 12px; }
+    .card img, .noimg { width: 52px; height: 52px; }
+    .card .offers { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .offer { width: auto; }
+    .pt { font-size: 30px; }
+    .verdict .pt { font-size: 46px; }
   }
 </style>
 </head>
 <body>
 <header>
-  <h1 class="logo">pris<span>vis</span></h1>
-  <p class="tagline">Jämför matpriser mellan kedjorna – gratis och utan reklam.</p>
-  <nav class="tabs" aria-label="Vy">
-    <button id="tab-search" class="active">Sök</button>
-    <button id="tab-basket">Kundvagn<span class="badge" id="basket-count">0</span></button>
-  </nav>
-  <div class="storebar" id="storebar"></div>
-  <div class="picker" id="picker" hidden>
-    <div class="picker-row">
-      <input id="store-q" type="search" placeholder="Sök ICA-butik eller ort" autocomplete="off" aria-label="Sök ICA-butik">
-      <button class="small-btn" id="near-me" type="button">Nära mig</button>
+  <div class="wrap">
+    <div class="topbar">
+      <h1 class="logo"><a href="./">prisvis</a></h1>
+      <nav class="tabs" aria-label="Vy">
+        <button id="tab-search" class="active">Sök</button>
+        <button id="tab-basket">Kundvagn<span class="badge" id="basket-count">0</span></button>
+      </nav>
     </div>
-    <ul class="store-list" id="store-list"></ul>
-    <div class="picker-msg" id="picker-msg">ICA-butiker sätter egna priser. Välj de butiker du handlar i – deras veckoerbjudanden hämtas varje natt.</div>
-  </div>
-  <div id="search-head">
-    <form id="f" role="search">
-      <input id="q" type="search" placeholder="Sök vara, t.ex. mellanmjölk eller Arla" autocomplete="off" aria-label="Sök vara">
-      <button>Sök</button>
-    </form>
-    <div class="chips" id="chips"></div>
+    <p class="tagline">Samma vara, olika pris. Jämför Willys, Hemköp, Coop, Lidl och dina ICA-butiker.</p>
+    <div class="storebar" id="storebar"></div>
+    <div class="picker" id="picker" hidden>
+      <div class="picker-row">
+        <input id="store-q" type="search" placeholder="Sök ICA-butik eller ort" autocomplete="off" aria-label="Sök ICA-butik">
+        <button class="small-btn" id="near-me" type="button">Nära mig</button>
+      </div>
+      <ul class="store-list" id="store-list"></ul>
+      <div class="picker-msg" id="picker-msg">ICA-butiker sätter egna priser. Välj de butiker du handlar i, så hämtas deras veckoerbjudanden varje natt.</div>
+    </div>
+    <div id="search-head">
+      <form id="f" role="search">
+        <input id="q" type="search" placeholder="Vad ska du handla? T.ex. nötfärs eller havregryn" autocomplete="off" aria-label="Sök vara">
+        <button>Sök</button>
+      </form>
+      <div class="chips" id="chips"></div>
+    </div>
   </div>
 </header>
 <main>
   <section id="view-search">
-    <div class="status" id="status"></div>
+    <div class="status" id="status" aria-live="polite"></div>
     <div class="cats" id="cats"></div>
-    <div class="grid" id="results"></div>
+    <div id="results"></div>
   </section>
   <section id="view-basket" hidden></section>
 </main>
-<footer>Priserna hämtas automatiskt varje morgon från kedjornas webbutiker. Kampanjpriser kan kräva flerköp eller medlemskap – kontrollera alltid i butiken.</footer>
+<footer><p>Priserna hämtas automatiskt varje dag från kedjornas webbutiker. Kampanjpriser kan kräva flerköp eller medlemskap, så kontrollera alltid i butiken.</p></footer>
 
 <script>
 const CONFIG = {
@@ -178,7 +221,14 @@ const $ = (id) => document.getElementById(id);
 const kr = (n) => n == null ? '–' : Number(n).toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const effective = (o) => o.promo_price ?? o.price;
-const dot = (chain) => `<span class="dot" style="background:${CHAIN_COLORS[chain] || '#999'}"></span>`;
+const chainVar = (chain) => `--c:${CHAIN_COLORS[chain] || 'var(--muted)'}`;
+// Pris som på hyllkanten: kronor stort, ören upphöjda
+const tag = (n) => {
+  if (n == null) return '–';
+  const [k, o] = Number(n).toFixed(2).split('.');
+  return `<span class="pt"><span class="sr">${kr(n)}</span><span aria-hidden="true">${Number(k).toLocaleString('sv-SE')}<sup>${o}</sup></span></span>`;
+};
+const metaLine = (parts) => parts.filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('');
 
 async function api(path, init = {}) {
   const res = await fetch(`${CONFIG.url}/rest/v1/${path}`, {
@@ -224,18 +274,18 @@ const offersOnly = (storeId) => icaStores.some((s) => s.id === storeId && s.cove
 const visibleOffer = (o) => o.chain !== 'ica' || chosenIds().has(o.store_id);
 
 function statusPill(s) {
-  if (s.status === 'full') return '<span class="pill">kö</span>';
+  if (s.status === 'full') return '<span class="pill">i kö</span>';
   if (s.status !== 'ready') return '<span class="pill">hämtas i natt</span>';
-  return s.coverage === 'offers' ? '<span class="pill ok">veckans erbjudanden</span>' : '';
+  return s.coverage === 'offers' ? '<span class="pill">erbjudanden</span>' : '';
 }
 
 function renderStorebar() {
   const bar = $('storebar');
-  const chips = icaStores.map((s) => `<span class="store-chip">${dot('ica')} <strong>${esc(s.name)}</strong> ${statusPill(s)}
+  const chips = icaStores.map((s) => `<span class="store-chip"><strong>${esc(s.name)}</strong> ${statusPill(s)}
       <button class="chip-x" data-remove="${esc(s.id)}" aria-label="Ta bort ${esc(s.name)}">×</button></span>`).join('');
   const add = icaStores.length < MAX_ICA
     ? `<button class="small-btn" id="open-picker">${icaStores.length ? '+ ICA-butik' : 'Välj ICA-butiker'}</button>` : '';
-  bar.innerHTML = icaStores.length ? chips + add : `<span>Välj dina ICA-butiker för att jämföra med ICA</span>${add}`;
+  bar.innerHTML = icaStores.length ? chips + add : `<span>ICA sätter priser per butik.</span>${add}`;
 }
 
 let catalogPromise = null;
@@ -343,23 +393,22 @@ async function refreshStoreStatus() {
 let lastResults = [];
 
 function renderOffer(o, isBest) {
-  const priceHtml = o.promo_price != null
-    ? `<s>${kr(o.price)}</s><strong>${kr(o.promo_price)}</strong>`
-    : `<strong>${kr(o.price)}</strong>`;
-  return `<a class="offer ${isBest ? 'best' : ''} ${o.in_stock === false ? 'out' : ''}" href="${esc(o.url)}" target="_blank" rel="noopener">
-    <span class="store">${dot(o.chain)}${esc(o.store)}</span>
-    <span>
-      ${o.promo_text ? `<span class="promo">${esc(o.promo_text)}</span>` : ''}
-      ${o.compare_price ? `<span class="compare">${kr(o.compare_price)}/${esc(o.compare_unit || '')}</span>` : ''}
-      ${o.in_stock === false ? '<span class="compare">Slut i lager</span>' : ''}
-    </span>
-    <span class="price">${isBest ? '<div class="best-label">Billigast</div>' : ''}${priceHtml}</span>
+  const promo = o.promo_price != null;
+  const cls = ['offer', isBest && 'best', promo && 'kampanj', o.in_stock === false && 'out'].filter(Boolean).join(' ');
+  return `<a class="${cls}" style="${chainVar(o.chain)}" href="${esc(o.url)}" target="_blank" rel="noopener">
+    <span class="store">${esc(o.store)}</span>
+    ${isBest ? '<span class="tagline-best">Billigast</span>' : ''}
+    ${promo ? `<span class="was">${kr(o.price)}</span>` : ''}
+    ${tag(effective(o))}
+    ${o.promo_text ? `<span class="promo">${esc(o.promo_text)}</span>` : ''}
+    ${o.compare_price ? `<span class="compare">${kr(o.compare_price)}/${esc(o.compare_unit || '')}</span>` : ''}
+    ${o.in_stock === false ? '<span class="compare">Slut i lager</span>' : ''}
   </a>`;
 }
 
 function basketControl(p) {
   const item = basket[String(p.product_id)];
-  if (!item) return `<button class="add" data-add="${p.product_id}">+ Kundvagn</button>`;
+  if (!item) return `<button class="add" data-add="${p.product_id}">Lägg i kundvagn</button>`;
   return `<span class="stepper"><button data-dec="${p.product_id}" aria-label="Minska">−</button><span>${item.qty}</span><button data-inc="${p.product_id}" aria-label="Öka">+</button></span>`;
 }
 
@@ -373,12 +422,12 @@ function renderProduct(p) {
       <div class="card-head">
         <div>
           <h2 class="title">${esc(p.name)}</h2>
-          <p class="meta">${[p.brand, p.size, p.category].filter(Boolean).map(esc).join(' · ')}</p>
+          <p class="meta">${metaLine([p.brand, p.size])}</p>
         </div>
         <div id="ctl-${p.product_id}">${basketControl(p)}</div>
       </div>
-      <div class="offers">${offers.map((o) => renderOffer(o, multi && effective(o) === bestPrice)).join('')}</div>
     </div>
+    <div class="offers">${offers.map((o) => renderOffer(o, multi && effective(o) === bestPrice)).join('')}</div>
   </article>`;
 }
 
@@ -441,7 +490,7 @@ async function renderBasket() {
   const view = $('view-basket');
   const ids = Object.keys(basket);
   if (!ids.length) {
-    view.innerHTML = `<div class="empty"><p><strong>Kundvagnen är tom.</strong></p><p>Sök efter varor och tryck ”+ Kundvagn” för att se vad hela handlingen kostar i varje butik.</p></div>`;
+    view.innerHTML = `<div class="empty"><p><strong>Kundvagnen är tom.</strong></p><p>Sök efter varor och tryck på ”Lägg i kundvagn”. Här ser du sedan vad hela handlingen kostar i varje butik.</p></div>`;
     return;
   }
   view.innerHTML = '<div class="status">Hämtar priser…</div>';
@@ -483,7 +532,7 @@ async function renderBasket() {
         ${o.promo_price != null ? `<span class="cell-promo">kampanj</span>` : ''}</td>`;
     }).join('');
     return `<tr>
-      <td><div class="item-name">${esc(item.name)}</div><div class="item-meta">${[item.brand, item.size].filter(Boolean).map(esc).join(' · ')}</div></td>
+      <td><div class="item-name">${esc(item.name)}</div><div class="item-meta">${[item.brand, item.size].filter(Boolean).map(esc).join(', ')}</div></td>
       <td><span class="stepper"><button data-bdec="${id}" aria-label="Minska">−</button><span>${item.qty}</span><button data-binc="${id}" aria-label="Öka">+</button></span></td>
       ${tds}
     </tr>`;
@@ -498,31 +547,32 @@ async function renderBasket() {
   const totalRow = cols.map((s) => {
     const t = totals[s.id];
     const isWin = winner && s.id === winner.id;
-    return `<td class="${isWin ? 'winner' : ''} ${t.found < n ? 'incomplete' : ''}">${kr(t.sum)}<div class="sub">${t.found === n ? 'alla varor' : `${t.found} av ${n} varor`}</div></td>`;
+    return `<td class="${isWin ? 'winner' : ''} ${t.found < n ? 'incomplete' : ''}">${tag(t.sum)}<div class="sub">${t.found === n ? 'alla varor' : `${t.found} av ${n} varor`}</div></td>`;
   }).join('');
 
-  const summary = [];
+  let verdict;
   if (winner) {
     const save = priciest ? totals[priciest.id].sum - totals[winner.id].sum : 0;
-    summary.push(`<div class="sum-card win"><div class="label">Billigast för hela vagnen</div><div class="value">${esc(winner.name)}</div><div class="label">${kr(totals[winner.id].sum)}${save > 0.004 ? ` – spara ${kr(save)} mot ${esc(priciest.name)}` : ''}</div></div>`);
+    verdict = `<div><p class="lead">Billigast för hela kundvagnen</p><p class="who">${esc(winner.name)}</p>
+      ${save > 0.004 ? `<p class="save">${kr(save)} billigare än ${esc(priciest.name)}</p>` : ''}</div>
+      <div>${tag(totals[winner.id].sum)}</div>`;
   } else {
-    summary.push(`<div class="sum-card"><div class="label">Ingen butik har alla varor</div><div class="value">–</div><div class="label">Se kolumnerna för vad som saknas</div></div>`);
+    verdict = `<div><p class="lead">Ingen butik har alla ${n} varor</p><p class="who">Se vad som saknas i tabellen</p></div>`;
   }
-  if (cols.length > 1) {
-    summary.push(`<div class="sum-card"><div class="label">Om du handlar billigaste varan var den finns</div><div class="value">${kr(mixSum)}</div><div class="label">${mixFound} av ${n} varor hittade</div></div>`);
-  }
+  const mix = cols.length > 1
+    ? `<p class="mix">Handlar du varje vara där den är billigast blir det <strong>${kr(mixSum)}</strong> för ${mixFound} av ${n} varor.</p>` : '';
 
   view.innerHTML = `
-    <div class="summary">${summary.join('')}</div>
+    <div class="verdict">${verdict}${mix}</div>
     <div class="basket-wrap">
       <table class="basket">
-        <thead><tr><th>Vara</th><th>Antal</th>${cols.map((s) => `<th><span class="store">${dot(s.chain)}${esc(s.name)}</span>${s.coverage === 'offers' ? `<div class="item-meta">${s.chain === 'lidl' ? 'bara veckans sortiment' : 'bara veckans erbjudanden'}</div>` : ''}</th>`).join('')}</tr></thead>
+        <thead><tr><th>Vara</th><th>Antal</th>${cols.map((s) => `<th class="col" style="${chainVar(s.chain)}">${esc(s.name)}${s.coverage === 'offers' ? `<div class="item-meta">${s.chain === 'lidl' ? 'bara veckans sortiment' : 'bara veckans erbjudanden'}</div>` : ''}</th>`).join('')}</tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr class="total"><td>Totalt</td><td></td>${totalRow}</tr></tfoot>
       </table>
     </div>
     <div class="basket-actions">
-      <span class="note">Grönt = billigast för varan. Kampanjpriser kan kräva flerköp eller medlemskap.</span>
+      <span class="note">Understruket pris är billigast för varan. Kampanjpriser kan kräva flerköp eller medlemskap.</span>
       <button class="link-btn" id="clear-basket">Töm kundvagnen</button>
     </div>`;
 }
@@ -556,7 +606,7 @@ $('tab-search').addEventListener('click', () => showView('search'));
 $('tab-basket').addEventListener('click', () => showView('basket'));
 
 $('f').addEventListener('submit', (e) => { e.preventDefault(); search($('q').value); });
-$('chips').innerHTML = SUGGESTIONS.map((s) => `<span class="chip" role="button" tabindex="0">${s}</span>`).join('');
+$('chips').innerHTML = 'Prova ' + SUGGESTIONS.map((s) => `<button type="button" class="chip">${s}</button>`).join(', ');
 $('chips').addEventListener('click', (e) => {
   if (e.target.classList.contains('chip')) { $('q').value = e.target.textContent; search(e.target.textContent); }
 });
