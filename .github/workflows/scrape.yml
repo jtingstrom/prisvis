@@ -12,6 +12,10 @@ on:
         description: 'Max antal sidor per kedja (tomt = alla)'
         required: false
         default: ''
+      auto:
+        description: 'Startad automatiskt av Supabase (hoppa över om redan hämtat i dag)'
+        required: false
+        default: 'false'
 
 concurrency:
   group: scrape
@@ -29,8 +33,12 @@ jobs:
         with:
           node-version: 22
       - id: axfood
+        env:
+          AUTO: ${{ inputs.auto }}
         run: node scraper/should-run.mjs willys hemkop
       - id: lidl
+        env:
+          AUTO: ${{ inputs.auto }}
         run: node scraper/should-run.mjs lidl --any-time
 
   test:

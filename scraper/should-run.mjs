@@ -8,7 +8,7 @@ import { readFileSync, appendFileSync } from 'node:fs';
 
 const config = JSON.parse(readFileSync(new URL('../config.json', import.meta.url)));
 const chains = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-const manual = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch';
+const manual = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch' && process.env.AUTO !== 'true';
 
 const now = new Date();
 const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
